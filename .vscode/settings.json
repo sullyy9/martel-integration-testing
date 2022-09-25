@@ -1,0 +1,6 @@
+{
+    "python.linting.pylintEnabled": true,
+    "python.linting.enabled": true,
+    "robot.language-server.python": "${workspaceFolder}/.venv/Scripts/python.exe",
+    "robot.pythonpath": ["${workspaceFolder}/martel_printer_test_lib"]
+}

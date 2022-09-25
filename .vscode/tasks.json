@@ -1,0 +1,38 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Run Selftest Example",
+            "type": "shell",
+            "command": "poetry run python martel_printer_test_lib",
+            "problemMatcher": []
+        },
+        {
+            "label": "Run Tests",
+            "type": "shell",
+            "command": "poetry",
+            "args": [
+                "run", "robot",
+                "--outputdir", "${workspaceFolder}/output/robot",
+                "--pythonpath", "${workspaceFolder}/martel_printer_test_lib",
+                "${workspaceFolder}/testsuite"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "Generate Samples",
+            "type": "shell",
+            "command": "poetry",
+            "args": [
+                "run", "robot",
+                "--outputdir", "${workspaceFolder}/output/robot",
+                "--pythonpath", "${workspaceFolder}/martel_printer_test_lib",
+                "--variable", "Sample_Output_Directory:${workspaceFolder}/output/samples",
+                "${workspaceFolder}/sample_generation"
+            ],
+            "problemMatcher": []
+        }
+    ]
+}
