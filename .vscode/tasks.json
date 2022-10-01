@@ -10,7 +10,7 @@
             "problemMatcher": []
         },
         {
-            "label": "Run Tests",
+            "label": "Run Test Suite",
             "type": "shell",
             "command": "poetry",
             "args": [
@@ -31,6 +31,17 @@
                 "--pythonpath", "${workspaceFolder}/martel_printer_test_lib",
                 "--variable", "Sample_Output_Directory:${workspaceFolder}/output/samples",
                 "${workspaceFolder}/sample_generation"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "Run Library Tests",
+            "type": "shell",
+            "command": "poetry",
+            "args": [
+                "run", "python",
+                "-m", "unittest", "discover",
+                "-s", "${workspaceFolder}/martel_printer_test_lib"
             ],
             "problemMatcher": []
         }
