@@ -3,11 +3,12 @@ from pathlib import Path
 import os
 
 from PIL import Image
+import pytesseract
 
-from printer_mech import MechInputRecords, PrintMechState
-from analyser import Analyser, AnlayserNotFound
+from analyser import AnlayserNotFound
 from printer import Printer, PrinterNotFound
-import compare
+from printout import PrintoutComparison
+import printout
 
 
 def main():
@@ -24,9 +25,12 @@ def main():
     os.makedirs(printer_out_dir, exist_ok=True)
     os.makedirs(compare_out_dir, exist_ok=True)
 
+    pytesseract.pytesseract.tesseract_cmd = r'C:\Users\ryansullivan\AppData\Local\Tesseract-OCR\tesseract'
+
     try:
         printer = Printer()
-        printer.usb.connect()
+        printer.startup()
+        printer.init_comms()
         print("Connected to printer on: ", printer.usb.get_port_name())
 
         # Start self-test and capture
@@ -41,10 +45,7 @@ def main():
 
         selftest_printout.save(Path(printer_out_dir, 'selftest.png'))
 
-        comparison = compare.print_with_sample(
-            selftest_printout, Image.open('./samples/selftest.png'))
-        comparison.save(Path(compare_out_dir, 'selftest.png'))
-        comparison.show()
+        print(pytesseract.image_to_string(printout.convert_to_bilevel(selftest_printout)))
 
         print('--------------------')
         print('Complete')
