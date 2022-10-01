@@ -9,15 +9,15 @@ from printer_mech import LTPD245Emulator
 
 
 PRINTER_VID = 0x483
-PRINTER_PID = 0x1
+PRINTER_PID = [0x1, 0x5740]
 
 ESC = 0x1B
 NULL = 0
-ENABLE_DEBUG = bytes([ESC, NULL, NULL, ord('D'), NULL])
-DEBUG_PRINT_SELFTEST = bytes([ESC, NULL, NULL, ord('S'), 8])
+ENABLE_DEBUG = bytearray([ESC, NULL, NULL, ord('D'), NULL])
+DEBUG_PRINT_SELFTEST = bytearray([ESC, NULL, NULL, ord('S'), 8])
 DEBUG_SET_OPTION = bytearray([ESC, NULL, NULL, ord('O')])
 
-COMMAND_RESET = bytes([ESC, ord('@')])
+COMMAND_RESET = bytearray([ESC, ord('@')])
 
 class Interface(Enum):
     USB = 1
@@ -35,7 +35,7 @@ class InterfaceNotAvailable(Exception):
 class Printer:
 
     def __init__(self):
-        self.mech = LTPD245Emulator()
+        self.mech_emulator = LTPD245Emulator()
         self.usb = PrinterInterfaceUSB()
     
     def __del__(self):
@@ -48,18 +48,22 @@ class Printer:
     def __exit__(self, exc_type, exc_value, exc_traceback):
         self.__del__()
 
+    @keyword('Startup Printer')
+    def startup(self):
+        pass
+
     @keyword('Shutdown Printer')
     def shutdown(self):
-        self.mech.end()
+        self.mech_emulator.end()
         self.usb.disconnect()
 
     @keyword('Wait Until Print Complete')
     def wait_until_print_complete(self):
-        self.mech.wait_until_print_complete()
+        self.mech_emulator.wait_until_print_complete()
 
     @keyword('Last Printout')
     def get_last_printout(self) -> Image.Image:
-        return self.mech.get_last_printout()
+        return self.mech_emulator.get_last_printout()
 
     @keyword(name='Connect To Printer Comm Interfaces')
     def init_comms(self):
@@ -71,7 +75,7 @@ class Printer:
 
     @keyword('Print ${text}')
     def print(self, text: str, interface: Interface = Interface.USB):
-        self.mech.start()
+        self.mech_emulator.start()
         match interface:
             case Interface.USB:
                 self.usb.send(text.encode(encoding='ascii'))
@@ -90,15 +94,15 @@ class Printer:
     def enable_debug(self):
         self.usb.send(ENABLE_DEBUG)
 
+    @keyword('Print Selftest')
     def print_selftest(self):
-        self.mech.start()
+        self.mech_emulator.start()
         self.usb.send(DEBUG_PRINT_SELFTEST)
 
     @keyword(name='Set Printer Option')
     def set_option(self, option: int, setting: int):
         self.usb.send(DEBUG_SET_OPTION + bytes([option, setting]))
 
-@library
 class PrinterInterfaceUSB():
     def __init__(self):
         self.port_info = None
@@ -108,12 +112,11 @@ class PrinterInterfaceUSB():
         if self.port is not None and self.port.isOpen():
             self.port.close()
 
-    @keyword(name='Open Printer USB Connection')
     def connect(self):
         ports = serial.tools.list_ports.comports()
         try:
             self.port_info = next(
-                port for port in ports if port.vid == PRINTER_VID and port.pid == PRINTER_PID)
+                port for port in ports if port.vid == PRINTER_VID and port.pid in PRINTER_PID)
 
             self.port = serial.Serial(self.port_info.name)
         except StopIteration as exc:

@@ -1,10 +1,8 @@
 from pathlib import Path
 import os
-import time
 
 from saleae import automation
-
-from robot.api.deco import keyword, library
+from saleae.automation.errors import Logic2AlreadyRunningError
 
 SPICL = 0
 SPIDAT = 1
@@ -14,43 +12,47 @@ MOTORA_L = 4
 MOTORB_L = 5
 STEPPER_EN = 6
 
+
 class AnlayserNotFound(Exception):
     pass
 
-@library(scope='GLOBAL')
+
 class Analyser:
     def __init__(self):
-        self.manager = None
-        self.device = None
-        self.current_capture = None
-        self.captures = []
+        self.manager: automation.Manager | None = None
+        self.device: automation.DeviceDesc | None = None
+        self.current_capture: automation.Capture | None = None
+        self.captures: list[automation.Capture] = []
 
-    
     def __del__(self):
         self.end()
-    
+
     def __enter__(self):
         self.start()
         return self
-    
+
     def __exit__(self, exc_type, exc_value, exc_traceback):
-        self.__del__()
-    
+        self.end()
+
     def start(self):
         if self.manager is None:
-            self.manager = automation.Manager.launch()
+            try:
+                self.manager = automation.Manager.launch()
+            except Logic2AlreadyRunningError:
+                self.manager = automation.Manager.connect()
+
         devices = self.manager.get_devices()
         if len(devices) < 1:
             raise AnlayserNotFound('Cannot find the analyser')
-        
+
         self.device = devices.pop(0)
 
     def end(self):
         if self.manager is not None:
-            self.manager = self.manager.close()
-    
+                self.manager = self.manager.close()
+
     def is_running(self) -> bool:
-        return False if self.manager is None else True
+        return True if self.manager is not None else False
 
     def start_timed_print_capture(self, duration: float = 10.0):
         device_configuration = automation.LogicDeviceConfiguration(
@@ -104,15 +106,14 @@ class Analyser:
             capture.close()
         if self.current_capture is not None:
             self.current_capture = self.current_capture.close()
-    
+
     def wait_for_completion(self):
         if self.current_capture is not None:
             self.current_capture.wait()
-    
+
     def export_capture(self, path: Path):
         if self.current_capture is not None:
-            self.current_capture.export_raw_data_csv(str(path.parent), digital_channels=[0, 1, 2, 3, 4, 5])
+            self.current_capture.export_raw_data_csv(
+                str(path.parent), digital_channels=[0, 1, 2, 3, 4, 5])
             if path.name != 'digital.csv':
                 os.replace(Path(path.parent, 'digital.csv'), path)
-        
-

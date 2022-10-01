@@ -36,13 +36,13 @@ class LTPD245Emulator:
     def __init__(self):
         self.analyser = Analyser()
         self.records: list[Path] = []
-        self.images: list[Path] =[]
+        self.images: list[Path] = []
 
         self.outdir = tempfile.TemporaryDirectory()
 
     def __del__(self):
         self.end()
-    
+
     def __enter__(self):
         return self
 
@@ -62,12 +62,12 @@ class LTPD245Emulator:
     def wait_until_print_complete(self):
         self.analyser.wait_for_completion()
 
-        record_path = Path(self.outdir.name, time.strftime('%Y%m%d-%H%M%S')).with_suffix('.csv')
+        record_path = Path(self.outdir.name, time.strftime(
+            '%Y%m%d-%H%M%S')).with_suffix('.csv')
         self.analyser.export_capture(record_path)
         self.records.append(record_path)
 
         self.analyser.clear_all_captures()
-
 
     def get_last_printout(self) -> Image.Image:
         return self.generate_image_from_record(self.records[-1])
@@ -182,25 +182,36 @@ class PrintMechState:
 
 class PaperBuffer:
     """
-    Buffer containign data on how long each dot has
-    been burned into the thermal paper. 
+    2D buffer representing the thermal paper.
+
+    The paper is divided into a grid where each cell is 1 thermal head 'dot' in size.
+
+    Each element contains the ammount of time a thermal head 'dot' has burned over a cell.
     """
 
     def __init__(self):
+        """
+        Initialise the paper buffer with 2 lines.
+        """
         self.buffer = [[0.0] * DOTS_PER_LINE, [0.0] * DOTS_PER_LINE]
 
     def new_line(self):
         """
-        Add a new line to the buffer. This is equivilent to
-        feeding the paper 1 dot line (4 motor steps)
+        Add a new line to the end of the buffer.
+
+        Visualy, this line is located at the bottom of the paper.
         """
         self.buffer.append([0.0] * DOTS_PER_LINE)
 
     def burn_line(self, line_buffer: list[float], between_lines=False):
         """
         Burn a line into the paper.
-        This is an additive process. i.e. if the line has already been burned, the new
+
+        This is an additive process. i.e. If the line has already been burned, the new
         line is added to the existing one. It does not replace it.
+
+        It takes 4 motor steps to move from one line to the next. The printer actually moves 2
+        steps at once, therefore if the thermal head is between 2 lines, both will be burned.
         """
         if not between_lines:
             self.buffer[-2] = list(map(add, self.buffer[-2], line_buffer))
@@ -210,7 +221,9 @@ class PaperBuffer:
 
     def into_image(self) -> Image.Image:
         """
-        Generate an image.
+        Generate a greyscale image from the buffer.
+
+        The method of calculating the darkness of a burned dot needs improvement.
         """
         img = Image.new('L', (DOTS_PER_LINE, len(self.buffer)))
 
