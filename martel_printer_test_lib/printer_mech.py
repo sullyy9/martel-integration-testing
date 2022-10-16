@@ -6,10 +6,12 @@ import math
 import time
 import tempfile
 
-from PIL import Image, ImageOps
+import cv2
+import numpy
+from numpy import ndarray, uint8
 
 from analyser import Analyser
-
+from printout import Printout
 
 DOTS_PER_LINE = 384
 
@@ -69,16 +71,16 @@ class LTPD245Emulator:
 
         self.analyser.clear_all_captures()
 
-    def get_last_printout(self) -> Image.Image:
+    def get_last_printout(self) -> Printout:
         return self.generate_image_from_record(self.records[-1])
 
-    def generate_image_from_record(self, record: Path) -> Image.Image:
+    def generate_image_from_record(self, record: Path) -> Printout:
         with MechInputRecords(record) as mech_record:
             print_mech = PrintMechState(next(mech_record))
             for state in mech_record:
                 print_mech.update(state)
 
-        return print_mech.get_paper_image()
+        return print_mech.get_printout()
 
 
 class MechInput:
@@ -172,12 +174,12 @@ class PrintMechState:
         """
         self.paper.new_line()
 
-    def get_paper_image(self) -> Image.Image:
+    def get_printout(self) -> Printout:
         """
         Return the image that has been burned into the paper.
         """
         self.burn_shift_register()
-        return self.paper.into_image()
+        return self.paper.as_printout()
 
 
 class PaperBuffer:
@@ -219,17 +221,30 @@ class PaperBuffer:
             self.buffer[-2] = list(map(add, self.buffer[-2], line_buffer))
             self.buffer[-1] = list(map(add, self.buffer[-1], line_buffer))
 
-    def into_image(self) -> Image.Image:
+    def as_printout(self) -> Printout:
         """
         Generate a greyscale image from the buffer.
 
         The method of calculating the darkness of a burned dot needs improvement.
         """
-        img = Image.new('L', (DOTS_PER_LINE, len(self.buffer)))
+        # img = Image.new('L', (DOTS_PER_LINE, len(self.buffer)))
+        # img = ndarray((len(self.buffer), DOTS_PER_LINE), dtype=uint8)
+        data = [max(0, 255 - int(math.ceil(pixel * 25000.0)))
+                for row in self.buffer for pixel in row]
 
-        img.putdata([max(0, 255 - int(math.ceil(pixel * 25000.0)))
-                    for row in self.buffer for pixel in row])
+        img = numpy.asarray(data, uint8)
+        img = numpy.reshape(img, (-1, DOTS_PER_LINE))
+
         border = int(DOTS_PER_LINE * 0.10)
-        img = ImageOps.expand(img, border=border, fill='white')
+        img = cv2.copyMakeBorder(
+            img,
+            top=border,
+            bottom=border,
+            left=border,
+            right=border,
+            borderType=cv2.BORDER_CONSTANT,
+            dst=img,
+            value=255
+        )
 
-        return img
+        return Printout(img)

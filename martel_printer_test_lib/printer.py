@@ -6,6 +6,7 @@ from robot.api.deco import keyword, library
 from PIL import Image
 
 from printer_mech import LTPD245Emulator
+from printout import Printout
 
 
 PRINTER_VID = 0x483
@@ -42,7 +43,6 @@ class Printer:
         self.shutdown()
 
     def __enter__(self):
-        self.usb.connect()
         return self
 
     def __exit__(self, exc_type, exc_value, exc_traceback):
@@ -62,7 +62,7 @@ class Printer:
         self.mech_emulator.wait_until_print_complete()
 
     @keyword('Last Printout')
-    def get_last_printout(self) -> Image.Image:
+    def get_last_printout(self) -> Printout:
         return self.mech_emulator.get_last_printout()
 
     @keyword(name='Connect To Printer Comm Interfaces')

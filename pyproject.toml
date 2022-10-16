@@ -8,13 +8,13 @@ packages = [{include = "martel_printer_test_lib"}]
 
 [tool.poetry.dependencies]
 python = "^3.10"
-logic2_automation = { url = "https://saleae.github.io/logic2-automation/_downloads/3a6389974664c88edfbd009a9eaac439/logic2_automation-1.0.0-py3-none-any.whl" }
 pywin32 = "^304"
-Pillow = "^9.2.0"
 pyserial = "^3.5"
 robotframework = "^5.0.1"
-hanging-threads = "^2.0.5"
 pytesseract = "^0.3.10"
+logic2-automation = "^1.0.2"
+opencv-python = "^4.6.0.66"
+numpy = "^1.23.4"
 
 [tool.poetry.dev-dependencies]
 pylint = "^2.15.3"

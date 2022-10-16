@@ -1,10 +1,22 @@
 from pathlib import Path
 import os
+import itertools
 
-from PIL import Image, ImageChops, ImageDraw, ImageFont, UnidentifiedImageError
+import cv2
+import numpy
+from numpy import ndarray, uint8
 
 from robot.api.deco import keyword, library
 from robot.api import Failure
+
+WHITE_GS = 255
+BLACK_GS = 0
+
+WHITE_BGR = (255, 255, 255)
+BLACK_BGR = (0, 0, 0)
+GREEN_BGR = (0, 255, 0)
+RED_BGR = (0, 0, 255)
+
 
 # Exceptions
 
@@ -21,8 +33,192 @@ class CannotLoadSample(Exception):
     pass
 
 
+class FormatError(Exception):
+    pass
+
+
+class SizeError(Exception):
+    pass
+
+
+class Printout:
+    def __init__(self, img: ndarray):
+        if len(img.shape) > 2 or img.dtype != uint8:
+            raise FormatError('Printout must be single channel 8bpp format.')
+
+        self.img = img
+
+    def __del__(self):
+        pass
+
+    def __iter__(self) -> 'PrintoutLinesIter':
+        return PrintoutLinesIter(self.img)
+
+    @classmethod
+    def open(cls, filepath: Path) -> 'Printout':
+        if not filepath.exists():
+            raise FileNotFoundError('Cannot find file: {}'.format(filepath))
+
+        return cls(cv2.imread(str(filepath.absolute()), cv2.IMREAD_GRAYSCALE))
+
+    def get_image(self) -> ndarray:
+        return self.img
+
+    def save(self, path: Path):
+        cv2.imwrite(str(path.absolute()), self.img)
+
+    @property
+    def length(self) -> int:
+        return self.img.shape[0]
+
+    @property
+    def width(self) -> int:
+        return self.img.shape[1]
+
+    @property
+    def size(self) -> tuple[int, int]:
+        return self.img.shape[:2]
+
+    def extend_length_to(self, new_length: int):
+        """
+        Extend the length of the printout to a given length in pixels.
+
+        Any extra space is added as whitespace to the bottom of the printout.
+        """
+        if self.length > new_length:
+            raise SizeError(
+                'Cannot extend printout as it is already longer than the given length.',
+                'printout length: ', self.length)
+
+        tmp = ndarray((new_length, self.img.shape[1]), dtype=self.img.dtype)
+        tmp[:self.img.shape[0], :] = self.img
+        tmp[self.img.shape[0]:, :] = WHITE_GS
+        self.img = tmp
+
+    def extend_width_to(self, new_width: int):
+        """
+        Extend the width of the printout to a given length in pixels.
+
+        Any extra space is added as whitespace to either side of the printout.
+        """
+        if self.width > new_width:
+            raise SizeError(
+                'Cannot widen printout as it is already wider than the given width.',
+                'printout length: ', self.width)
+
+        tmp = ndarray((self.length, new_width), dtype=self.img.dtype)
+
+        # Horizontal start and end position of self within the new image.
+        self_start = int((new_width - self.width) / 2)
+        self_end = int(self_start + self.width)
+
+        tmp[:, :self_start] = WHITE_GS
+        tmp[:, self_start:self_end] = self.img
+        tmp[:, self_end:] = WHITE_GS
+        self.img = tmp
+
+    def compare_with(self, other: 'Printout') -> float:
+        """
+        Find the percentage by which the images match.
+
+        Returns
+        -------
+        Float - Value between 0.0 to 1.0.
+
+        Exceptions
+        ----------
+        - Raises SizeError if the prinouts are not the same size.
+        """
+        # Crop both images.
+        # Make pure white pixels black, make grey and black pixels white.
+        (_, print1) = cv2.threshold(self.img, 254, WHITE_GS, cv2.THRESH_BINARY_INV)
+        x, y, w, h = cv2.boundingRect(print1)
+        print1 = self.img[y:y+h, x:x+w]
+
+        (_, print2) = cv2.threshold(other.img, 254, WHITE_GS, cv2.THRESH_BINARY_INV)
+        x, y, w, h = cv2.boundingRect(print2)
+        print2 = other.img[y:y+h, x:x+w]
+
+        if print1.shape != print2.shape:
+            raise SizeError(
+                'Cannot compare printouts that are not the same size.',
+                'This size: ', print1.shape,
+                'Other size: ', print2.shape
+            )
+
+        # Convert all gray pixels to black.
+        (_, print1) = cv2.threshold(print1, 254, WHITE_GS, cv2.THRESH_BINARY)
+        (_, print2) = cv2.threshold(print2, 254, WHITE_GS, cv2.THRESH_BINARY)
+
+        pixels_different = numpy.sum(print1 != print2)
+        similarity = 1 - (pixels_different / (self.width * self.length))
+
+        return similarity
+
+    def create_diff_with(self, other: 'Printout') -> cv2.Mat:
+        """
+        """
+        if self.img.shape != other.img.shape:
+            raise SizeError(
+                'Cannot create diff for printouts that are not the same size.',
+                'This size: ', self.img.shape,
+                'Other size: ', other.img.shape
+            )
+
+        # Convert all gray pixels to black.
+        (_, print1) = cv2.threshold(self.img, 254, WHITE_GS, cv2.THRESH_BINARY)
+        (_, print2) = cv2.threshold(other.img, 254, WHITE_GS, cv2.THRESH_BINARY)
+        black, white = 0, 255
+
+        # Compare pixels between the 2 inputs.
+        # If it has been added, make it green in the diff.
+        # If removed, make it red in the diff.
+        diff = numpy.full((self.length, self.width, 3), WHITE_BGR, dtype=uint8)
+        diff_width = diff.shape[1]
+        diff_height = diff.shape[0]
+        for pos in itertools.product(range(0, diff_height-1), range(0, diff_width-1)):
+            if print1[pos] == WHITE_GS and print2[pos] == BLACK_GS:
+                diff[pos] = GREEN_BGR
+            elif print1[pos] == BLACK_GS and print2[pos] == WHITE_GS:
+                diff[pos] = RED_BGR
+            elif print1[pos] == BLACK_GS and print2[pos] == BLACK_GS:
+                diff[pos] = BLACK_BGR
+            else:
+                pass  # White
+
+        return diff
+
+
+class PrintoutLinesIter:
+    def __init__(self, img: ndarray):
+        if len(img.shape) > 2 or img.dtype != uint8:
+            raise FormatError('Printout must be single channel 8bpp format.')
+
+        self.img = img
+        self.row = 0
+        self.max_row = img.shape[0] - 1
+
+    def __next__(self) -> cv2.Mat:
+        # Find the start of the text line.
+        while numpy.all(self.img[self.row] == WHITE_GS):
+            self.row += 1
+            if self.row > self.max_row:
+                raise StopIteration
+        
+        # Copy the text row into a new image.
+        text_row = []
+        while not numpy.all(self.img[self.row] == WHITE_GS):
+            text_row.append(self.img[self.row])
+            self.row += 1
+            if self.row > self.max_row:
+                raise StopIteration
+
+        return numpy.asarray(text_row)
+
+
+
 @library(scope='SUITE')
-class PrintoutComparison:
+class ComparisonLibrary:
     def __init__(self):
         self.sample = None
 
@@ -32,132 +228,94 @@ class PrintoutComparison:
 
     @keyword('Load Sample ${filename}')
     def load_sample(self, filename: str):
-        sample_path = Path(self.sample_dir, filename)
         try:
-            sample = Image.open(sample_path)
-            if sample.mode != 'L':
-                raise CannotLoadSample(
-                    sample_path) from InvalidFormat(sample.mode)
-
-            self.sample = convert_to_bilevel(sample)
-
-        except (FileNotFoundError, UnidentifiedImageError, ValueError, TypeError) as exc:
-            raise CannotLoadSample(sample_path) from exc
+            self.sample = Printout.open(Path(self.sample_dir, filename))
+        except FileNotFoundError as exc:
+            raise Failure('Failed to find sample') from exc
+        except FormatError as exc:
+            raise Failure('Sample has incorrect format') from exc
+        except:
+            raise Failure('Unknown error when loading sample')
 
     @keyword('Clear Sample')
     def clear_sample(self):
         self.sample = None
 
     @keyword('Get Sample')
-    def get_sample(self) -> Image.Image | None:
+    def get_sample(self) -> Printout | None:
         if self.sample is None:
             raise SampleNotSet
         return self.sample
 
     @keyword('Sample Should Match ${printout}')
-    def matches(self, printout: Image.Image):
+    def matches(self, printout: Printout):
         if self.sample is None:
             raise SampleNotSet(
-                'No sample has been set to compare a printout against')
-        if self.sample is not None:
-            diff = ImageChops.difference(
-                convert_to_bilevel(printout), self.sample)
-            if diff.getbbox() is None:
-                return
-            else:
-                raise Failure('Printout does not match sample')
+                'No sample has been set to compare a printout against'
+            )
+
+        try:
+            if self.sample.compare_with(printout) != 1.0:
+                raise Failure('Printout content does not match sample')
+        except SizeError as exc:
+            raise Failure('Printout size does not match sample.') from exc
 
     @keyword(name='Save Comparison')
-    def create_comparison_and_save(self, printout: Image.Image, filename: str):
-        if self.sample is not None:
-            diff = ImageChops.difference(
-                printout.point(greyscale_to_bw), self.sample)
+    def create_comparison_and_save(self, printout: Printout, filename: str):
+        if self.sample is None:
+            raise Failure('No Sample Set')
 
-            # Create a comparison image. 3 printouts side by side in the order:
-            # printout, sample, diff
-            diff_image = create_diff_image(
-                self.sample, convert_to_bilevel(printout))
-            width = printout.width + self.sample.width + diff_image.width
-            height = max(printout.height, self.sample.height)
+        # Equilize the printout sizes.
+        if self.sample.width < printout.width:
+            self.sample.extend_width_to(printout.length)
+        if printout.width < self.sample.width:
+            printout.extend_width_to(self.sample.width)
 
-            comparison = Image.new('RGB', (width, height), (255, 255, 255))
-            comparison.paste(self.sample, (0, 0))
-            comparison.paste(printout, (printout.width, 0))
-            comparison.paste(
-                diff_image, (printout.width + self.sample.width, 0))
+        if self.sample.length < printout.length:
+            self.sample.extend_length_to(printout.length)
+        if printout.length < self.sample.length:
+            printout.extend_length_to(self.sample.length)
+        print_width = self.sample.width
 
-            # Label the images
-            diff_box = diff.getbbox()
-            if diff_box is not None:
-                draw = ImageDraw.Draw(comparison)
-                fnt = ImageFont.load_default()
-                draw.text((0, 0), "Sample", font=fnt, fill=(0, 0, 0))
-                draw.text((printout.size[0], 0),
-                          "Printout", font=fnt, fill=(0, 0, 0))
+        diff_image = self.sample.create_diff_with(printout)
 
-                # draw.rectangle(diff_box, outline='red')
+        # Create the comparison image which contains the sample, printout and diff
+        # side by side.
+        shape = (self.sample.length, print_width * 3, 3)
+        comparison = numpy.full(shape, WHITE_BGR, dtype=uint8)
 
-            comparison.save(Path(self.compare_out_dir, filename))
-        else:
-            raise Exception('No Sample Set')
+        comparison[:, :print_width] = cv2.cvtColor(
+            self.sample.get_image(), cv2.COLOR_GRAY2RGB)
+        comparison[:, print_width:(
+            print_width * 2)] = cv2.cvtColor(printout.get_image(), cv2.COLOR_GRAY2RGB)
+        comparison[:, (print_width * 2):] = diff_image
+
+        # Label the images.
+        comparison = cv2.putText(
+            comparison, 'Sample',
+            org=(0, 15),
+            fontFace=cv2.FONT_HERSHEY_PLAIN,
+            fontScale=1,
+            color=(0, 0, 0)
+        )
+        comparison = cv2.putText(
+            comparison, 'Printout',
+            org=(print_width, 15),
+            fontFace=cv2.FONT_HERSHEY_PLAIN,
+            fontScale=1,
+            color=(0, 0, 0)
+        )
+        comparison = cv2.putText(
+            comparison, 'Diff',
+            org=(print_width * 2, 15),
+            fontFace=cv2.FONT_HERSHEY_PLAIN,
+            fontScale=1,
+            color=(0, 0, 0)
+        )
+
+        cv2.imwrite(
+            str(Path(self.compare_out_dir, filename).absolute()), comparison)
 
     @keyword('Save Printout')
-    def save_printout(self, printout: Image.Image, filename: str):
+    def save_printout(self, printout: Printout, filename: str):
         printout.save(Path(self.compare_out_dir, filename))
-
-
-def create_diff_image(img1: Image.Image, img2: Image.Image) -> Image.Image:
-    if img1.mode != '1':
-        raise InvalidFormat('Image 1 has format:', img1.mode,
-                            'Image must be in 1 bit per pixel (1) format')
-
-    if img2.mode != '1':
-        raise InvalidFormat('Image 2 has format:', img2.mode,
-                            'Image must be in 1 bit per pixel (1) format')
-
-    if img1.width != img2.width:
-        raise InvalidFormat('Printouts must be the same width')
-
-    black = 0
-    white = 1
-
-    # Make both images have the same height.
-    # Add whitespace if nescessary.
-    if img1.height < img2.height:
-        tmp = Image.new('1', (img1.width, img2.height), white)
-        tmp.paste(img1, (0, 0))
-        img1 = tmp
-    elif img2.height < img1.height:
-        tmp = Image.new('1', (img2.width, img1.height), white)
-        tmp.paste(img2, (0, 0))
-        img2 = tmp
-
-    diff = Image.new('RGB', (img1.width, img1.height), (255, 255, 255))
-
-    for x in range(0, diff.width-1):
-        for y in range(0, diff.height-1):
-            if img1.getpixel((x, y)) == white and img2.getpixel((x, y)) == black:
-                diff.putpixel((x, y), (0, 255, 0))
-            elif img1.getpixel((x, y)) == black and img2.getpixel((x, y)) == white:
-                diff.putpixel((x, y), (255, 0, 0))
-            elif img1.getpixel((x, y)) == black and img2.getpixel((x, y)) == black:
-                diff.putpixel((x, y), (0, 0, 0))
-            else:
-                diff.putpixel((x, y), (255, 255, 255))
-
-    diff.show()
-    return diff
-
-
-def greyscale_to_bw(pixel):
-    return 0 if pixel <= 254 else 255
-
-
-def convert_to_bilevel(printout: Image.Image) -> Image.Image:
-    if printout.mode != 'L':
-        raise InvalidFormat('Image must be in greyscale mode')
-    return printout.point(map_pixel_to_bw, mode='1')
-
-
-def map_pixel_to_bw(pixel):
-    return 0 if pixel <= 254 else 1

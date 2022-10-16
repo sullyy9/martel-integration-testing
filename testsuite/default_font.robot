@@ -2,7 +2,7 @@
 Documentation       Verify that the default font settings contain the correct fonts.
 
 Library             printer.Printer
-Library             printout.PrintoutComparison
+Library             printout.ComparisonLibrary
 Resource            config_options.resource
 
 Suite Setup         Connect To Printer Comm Interfaces
