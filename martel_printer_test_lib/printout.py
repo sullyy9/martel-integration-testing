@@ -7,6 +7,7 @@ import numpy
 from numpy import ndarray, uint8
 
 from robot.api.deco import keyword, library
+from robot.libraries.BuiltIn import BuiltIn
 from robot.api import Failure
 
 WHITE_GS = 255
@@ -14,7 +15,7 @@ BLACK_GS = 0
 
 WHITE_BGR = (255, 255, 255)
 BLACK_BGR = (0, 0, 0)
-GREEN_BGR = (0, 255, 0)
+GREEN_BGR = (0, 200, 0)
 RED_BGR = (0, 0, 255)
 
 
@@ -217,20 +218,43 @@ class PrintoutLinesIter:
         return numpy.asarray(text_row)
 
 
-
-@library(scope='SUITE')
+@library(scope='GLOBAL')
 class ComparisonLibrary:
+    PRINTOUT_DIR = 'printout'
+    COMPARISON_DIR = 'comparison'
+    SAMPLE_DIR = 'samples'
+
     def __init__(self):
         self.sample = None
 
-        self.compare_out_dir = Path(os.getcwd(), 'output', 'compare')
-        self.sample_dir = Path(os.getcwd(), 'samples')
-        os.makedirs(self.compare_out_dir, exist_ok=True)
+        self.output_path = Path(os.getcwd(), 'output').absolute()
+        self.printout_path = Path(self.output_path, self.PRINTOUT_DIR)
+        self.comparison_path = Path(self.output_path, self.COMPARISON_DIR)
+        self.sample_path = Path(os.getcwd(), self.SAMPLE_DIR)
+
+    @keyword('Create Comparison Library Output Directories')
+    def create_output_directories(self):
+        """
+        Create output directories for printout and comparison images.
+
+        These directories will be created in the directory specified by the
+        ${OUTPUT DIR} global variable in Robot Framework.
+
+        """
+        self.output_path = Path(
+            BuiltIn().get_variable_value("${OUTPUT DIR}")).absolute()
+
+        self.printout_path = Path(self.output_path, self.PRINTOUT_DIR)
+        self.compare_path = Path(self.output_path, self.COMPARISON_DIR)
+        self.sample_path = Path(os.getcwd(), self.SAMPLE_DIR)
+
+        os.makedirs(self.compare_path, exist_ok=True)
+        os.makedirs(self.printout_path, exist_ok=True)
 
     @keyword('Load Sample ${filename}')
     def load_sample(self, filename: str):
         try:
-            self.sample = Printout.open(Path(self.sample_dir, filename))
+            self.sample = Printout.open(Path(self.sample_path, filename))
         except FileNotFoundError as exc:
             raise Failure(f'Failed to load sample - {exc}')
         except FormatError as exc:
@@ -314,9 +338,15 @@ class ComparisonLibrary:
             color=(0, 0, 0)
         )
 
-        cv2.imwrite(
-            str(Path(self.compare_out_dir, filename).absolute()), comparison)
+        cv2.imwrite(str(Path(self.compare_path, filename)), comparison_img)
+
+        BuiltIn().set_test_message("\n", append=True)
+        img_path = Path(self.COMPARISON_DIR, filename)
+        BuiltIn().set_test_message(
+            f"*HTML* <img src='{img_path}' width='100%'/>",
+            append=True
+        )
 
     @keyword('Save Printout')
     def save_printout(self, printout: Printout, filename: str):
-        printout.save(Path(self.compare_out_dir, filename))
+        printout.save(Path(self.printout_path, filename))

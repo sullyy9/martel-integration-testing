@@ -15,7 +15,7 @@
             "command": "poetry",
             "args": [
                 "run", "robot",
-                "--outputdir", "${workspaceFolder}/output/robot",
+                "--outputdir", "${workspaceFolder}/output",
                 "--pythonpath", "${workspaceFolder}/martel_printer_test_lib",
                 "${workspaceFolder}/testsuite"
             ],
