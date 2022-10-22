@@ -1,7 +1,15 @@
 {
+    // Specified in the Pep8 standard.
+    "editor.rulers": [
+        79
+    ],
     "python.linting.pylintEnabled": true,
     "python.linting.enabled": true,
-    "python.linting.pylintArgs": ["--generate-members"],
+    "python.linting.pylintArgs": [
+        "--generate-members"
+    ],
     "robot.language-server.python": "${workspaceFolder}/.venv/Scripts/python.exe",
-    "robot.pythonpath": ["${workspaceFolder}/martel_printer_test_lib"]
+    "robot.pythonpath": [
+        "${workspaceFolder}/martel_printer_test_lib"
+    ],
 }

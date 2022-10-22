@@ -57,7 +57,7 @@ class Printout:
     @classmethod
     def open(cls, filepath: Path) -> 'Printout':
         if not filepath.exists():
-            raise FileNotFoundError('Cannot find file: {}'.format(filepath))
+            raise FileNotFoundError(f'Cannot find file {filepath}')
 
         return cls(cv2.imread(str(filepath.absolute()), cv2.IMREAD_GRAYSCALE))
 
@@ -135,7 +135,8 @@ class Printout:
         x, y, w, h = cv2.boundingRect(print1)
         print1 = self.img[y:y+h, x:x+w]
 
-        (_, print2) = cv2.threshold(other.img, 254, WHITE_GS, cv2.THRESH_BINARY_INV)
+        (_, print2) = cv2.threshold(other.img,
+                                    254, WHITE_GS, cv2.THRESH_BINARY_INV)
         x, y, w, h = cv2.boundingRect(print2)
         print2 = other.img[y:y+h, x:x+w]
 
@@ -204,7 +205,7 @@ class PrintoutLinesIter:
             self.row += 1
             if self.row > self.max_row:
                 raise StopIteration
-        
+
         # Copy the text row into a new image.
         text_row = []
         while not numpy.all(self.img[self.row] == WHITE_GS):
@@ -231,7 +232,7 @@ class ComparisonLibrary:
         try:
             self.sample = Printout.open(Path(self.sample_dir, filename))
         except FileNotFoundError as exc:
-            raise Failure('Failed to find sample') from exc
+            raise Failure(f'Failed to load sample - {exc}')
         except FormatError as exc:
             raise Failure('Sample has incorrect format') from exc
         except:
@@ -282,31 +283,31 @@ class ComparisonLibrary:
         # Create the comparison image which contains the sample, printout and diff
         # side by side.
         shape = (self.sample.length, print_width * 3, 3)
-        comparison = numpy.full(shape, WHITE_BGR, dtype=uint8)
+        comparison_img = numpy.full(shape, WHITE_BGR, dtype=uint8)
 
-        comparison[:, :print_width] = cv2.cvtColor(
+        comparison_img[:, :print_width] = cv2.cvtColor(
             self.sample.get_image(), cv2.COLOR_GRAY2RGB)
-        comparison[:, print_width:(
+        comparison_img[:, print_width:(
             print_width * 2)] = cv2.cvtColor(printout.get_image(), cv2.COLOR_GRAY2RGB)
-        comparison[:, (print_width * 2):] = diff_image
+        comparison_img[:, (print_width * 2):] = diff_image
 
         # Label the images.
-        comparison = cv2.putText(
-            comparison, 'Sample',
+        comparison_img = cv2.putText(
+            comparison_img, 'Sample',
             org=(0, 15),
             fontFace=cv2.FONT_HERSHEY_PLAIN,
             fontScale=1,
             color=(0, 0, 0)
         )
-        comparison = cv2.putText(
-            comparison, 'Printout',
+        comparison_img = cv2.putText(
+            comparison_img, 'Printout',
             org=(print_width, 15),
             fontFace=cv2.FONT_HERSHEY_PLAIN,
             fontScale=1,
             color=(0, 0, 0)
         )
-        comparison = cv2.putText(
-            comparison, 'Diff',
+        comparison_img = cv2.putText(
+            comparison_img, 'Diff',
             org=(print_width * 2, 15),
             fontFace=cv2.FONT_HERSHEY_PLAIN,
             fontScale=1,

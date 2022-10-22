@@ -243,7 +243,7 @@ class PaperBuffer:
             left=border,
             right=border,
             borderType=cv2.BORDER_CONSTANT,
-            dst=img,
+            dst=img, # type: ignore
             value=255
         )
 
