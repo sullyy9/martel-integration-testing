@@ -1,72 +1,124 @@
 *** Settings ***
-Documentation       Verify that the default font settings contain the correct fonts.
+Documentation       Verify that the default font settings contain the correct
+...                 fonts.
 
 Library             printer.Printer
 Library             printout.ComparisonLibrary
-Resource            config_options.resource
+Resource            configuration_options.resource
 
 Suite Setup         Connect To Printer Comm Interfaces
 Suite Teardown      Disconnect From Printer Comm Interfaces
 Test Teardown       Run Keywords
 ...                     Save Comparison If Test Failed    AND
-...                     Set Printer Option ${Default Font} To 1
+...                     Set Option ${Default Font} To 1
+
+Force Tags          config_options    default_fonts
 
 
 *** Variables ***
-${Arial16 Sample}       arial16_sample_text.png
-${Arial12 Sample}       arial12_sample_text.png
-${Arial9 Sample}        arial9_sample_text.png
-${Arial8 Sample}        arial8_sample_text.png
+${ARIAL16 SAMPLE}       arial16_sample_text.png
+${ARIAL12 SAMPLE}       arial12_sample_text.png
+${ARIAL9 SAMPLE}        arial9_sample_text.png
+${ARIAL8 SAMPLE}        arial8_sample_text.png
+${UNICODE16 SAMPLE}     unicode16_sample_text.png
+${UNICODE12 SAMPLE}     unicode12_sample_text.png
+${UNICODE8 SAMPLE}      unicode8_sample_text.png
 
-${Sample Text}          Martel Instruments is a leading manufacturer and global supplier of bespoke and innovative commercial printing solutions.\n
+${SAMPLE TEXT}          Martel Instruments is a leading manufacturer and global
+...                     supplier of bespoke and innovative commercial printing
+...                     solutions.\n
 
 
 *** Test Cases ***
 Default Font 1 Should Be Arial16
-    [Tags]    config_options    default_fonts
+    [Documentation]
+    ...    Verify that the default font configuration option has the Arial16
+    ...    font as its first setting.
+    [Tags]    arial16
 
-    Given Default Font Is Set To 1
-    When Printing ${Sample Text}
-    Then Printout Should Match ${Arial16 Sample}
+    Set Option ${DEFAULT FONT} To 1
+    Print ${SAMPLE TEXT}
+    Wait Until Print Complete
+    Printout Should Match ${ARIAL16 SAMPLE}
 
 Default Font 2 Should Be Arial12
-    [Tags]    config_options    default_fonts
+    [Documentation]
+    ...    Verify that the default font configuration option has the Arial12
+    ...    font as its second setting.
+    [Tags]    arial12
 
-    Given Default Font Is Set To 2
-    When Printing ${Sample Text}
-    Then Printout Should Match ${Arial12 Sample}
+    Set Option ${DEFAULT FONT} To 2
+    Print ${SAMPLE TEXT}
+    Wait Until Print Complete
+    Printout Should Match ${ARIAL12 SAMPLE}
 
 Default Font 3 Should Be Arial9
-    [Tags]    config_options    default_fonts
+    [Documentation]
+    ...    Verify that the default font configuration option has the Arial9
+    ...    font as its third setting.
+    [Tags]    arial9
 
-    Given Default Font Is Set To 3
-    When Printing ${Sample Text}
-    Then Printout Should Match ${Arial9 Sample}
+    Set Option ${DEFAULT FONT} To 3
+    Print ${SAMPLE TEXT}
+    Wait Until Print Complete
+    Printout Should Match ${ARIAL9 SAMPLE}
 
 Default Font 4 Should Be Arial8
-    [Tags]    config_options    default_fonts
+    [Documentation]
+    ...    Verify that the default font configuration option has the Arial8
+    ...    font as its fourth setting.
+    [Tags]    arial8
 
-    Given Default Font Is Set To 4
-    When Printing ${Sample Text}
-    Then Printout Should Match ${Arial8 Sample}
+    Set Option ${DEFAULT FONT} To 4
+    Print ${SAMPLE TEXT}
+    Wait Until Print Complete
+    Printout Should Match ${ARIAL8 SAMPLE}
+
+Default Font 5 Should Be Unicode16
+    [Documentation]
+    ...    Verify that the default font configuration option has the Arial8
+    ...    font as its fourth setting.
+    [Tags]    unicode16
+
+    Set Option ${DEFAULT FONT} To 5
+    Print ${SAMPLE TEXT}
+    Wait Until Print Complete
+    Printout Should Match ${UNICODE16 SAMPLE}
+
+Default Font 6 Should Be Unicode12
+    [Documentation]
+    ...    Verify that the default font configuration option has the Arial8
+    ...    font as its fourth setting.
+    [Tags]    unicode12
+
+    Set Option ${DEFAULT FONT} To 6
+    Print ${SAMPLE TEXT}
+    Wait Until Print Complete
+    Printout Should Match ${UNICODE12 SAMPLE}
+
+Default Font 7 Should Be Unicode8
+    [Documentation]
+    ...    Verify that the default font configuration option has the Arial8
+    ...    font as its fourth setting.
+    [Tags]    unicode8
+
+    Set Option ${DEFAULT FONT} To 7
+    Print ${SAMPLE TEXT}
+    Wait Until Print Complete
+    Printout Should Match ${UNICODE8 SAMPLE}
 
 
 *** Keywords ***
-Default Font Is Set To ${Setting:\d+}
-    Enable Printer Debug Mode
-    Set Printer Option    ${Default Font}    ${Setting}
-    Reset Printer
-    Sleep    1s
-
-Printing ${Text}
-    Print ${Text}
-    Wait Until Print Complete
-
-Printout Should Match ${Sample}
-    Load Sample ${Sample}
-    ${Printout} =    Last Printout
-    Sample Should Match ${Printout}
+Printout Should Match ${SAMPLE}
+    Load Sample ${SAMPLE}
+    ${PRINTOUT} =    Last Printout
+    Sample Should Match ${PRINTOUT}
 
 Save Comparison If Test Failed
+    [Documentation]
+    ...    If the last test failed, generate an image comparing the
+    ...    sample and printout and save it.
+
     ${Printout} =    Last Printout
-    Run Keyword If Test Failed    Save Comparison    ${Printout}    ${TEST NAME}.png
+    Run Keyword If Test Failed
+    ...    Save Comparison    ${Printout}    ${TEST NAME}.png

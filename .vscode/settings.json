@@ -6,7 +6,7 @@
     "python.linting.pylintEnabled": true,
     "python.linting.enabled": true,
     "python.linting.pylintArgs": [
-        "--generate-members"
+        "--generated-members"
     ],
     "robot.language-server.python": "${workspaceFolder}/.venv/Scripts/python.exe",
     "robot.pythonpath": [

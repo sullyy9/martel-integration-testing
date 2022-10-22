@@ -2,27 +2,27 @@
 Documentation       Generate samples
 
 Library             printer.Printer
-Library             printout
+Library             printout.ComparisonLibrary
 
 Suite Setup         Connect To Printer Comm Interfaces
 Suite Teardown      Disconnect From Printer Comm Interfaces
 Test Teardown       Set Printer Option ${Default Font} To 1
 
+Force Tags          example_text
+
 
 *** Variables ***
-${Default Font}             5
+${DEFAULT FONT}     5
 
-${Arial16 Sample Text}      arial16_sample_text.png
-${Arial12 Sample Text}      arial12_sample_text.png
-${Arial9 Sample Text}       arial9_sample_text.png
-
-${Sample Text}              Martel Instruments is a leading manufacturer and global supplier of bespoke and innovative commercial printing solutions.\n
+${SAMPLE TEXT}      Martel Instruments is a leading manufacturer and
+...                 global supplier of bespoke and innovative
+...                 commercial printing solutions.\n
 
 
 *** Tasks ***
 Generate Arial16 Example Text Sample
     [Documentation]    Generate an example text printout sample for the Arial16 font.
-    [Tags]    example_text    arial16
+    [Tags]    arial16
 
     Set Printer Option ${Default Font} To 1
 
@@ -34,7 +34,7 @@ Generate Arial16 Example Text Sample
 
 Generate Arial12 Example Text Sample
     [Documentation]    Generate an example text printout sample for the Arial12 font.
-    [Tags]    example_text    arial12
+    [Tags]    arial12
 
     Set Printer Option ${Default Font} To 2
 
@@ -46,7 +46,7 @@ Generate Arial12 Example Text Sample
 
 Generate Arial9 Example Text Sample
     [Documentation]    Generate an example text printout sample for the Arial9 font.
-    [Tags]    example_text    arial9
+    [Tags]    arial9
 
     Set Printer Option ${Default Font} To 3
 
@@ -58,7 +58,7 @@ Generate Arial9 Example Text Sample
 
 Generate Arial8 Example Text Sample
     [Documentation]    Generate an example text printout sample for the Arial8 font.
-    [Tags]    example_text    arial8
+    [Tags]    arial8
 
     Set Printer Option ${Default Font} To 4
 
@@ -70,7 +70,7 @@ Generate Arial8 Example Text Sample
 
 Generate Unicode16 Example Text Sample
     [Documentation]    Generate an example text printout sample for the Arial8 font.
-    [Tags]    example_text    unicode16
+    [Tags]    unicode16
 
     Set Printer Option ${Default Font} To 5
 
@@ -82,7 +82,7 @@ Generate Unicode16 Example Text Sample
 
 Generate Unicode12 Example Text Sample
     [Documentation]    Generate an example text printout sample for the Arial8 font.
-    [Tags]    example_text    unicode12
+    [Tags]    unicode12
 
     Set Printer Option ${Default Font} To 6
 
@@ -94,7 +94,7 @@ Generate Unicode12 Example Text Sample
 
 Generate Unicode8 Example Text Sample
     [Documentation]    Generate an example text printout sample for the Arial8 font.
-    [Tags]    example_text    unicode8
+    [Tags]    unicode8
 
     Set Printer Option ${Default Font} To 7
 
@@ -106,7 +106,7 @@ Generate Unicode8 Example Text Sample
 
 Generate Unicode24 Example Text Sample
     [Documentation]    Generate an example text printout sample for the Arial8 font.
-    [Tags]    example_text    unicode24
+    [Tags]    unicode24
 
     Set Printer Option ${Default Font} To 8
 
@@ -115,6 +115,7 @@ Generate Unicode24 Example Text Sample
 
     ${Printout} =    Last Printout
     Save Printout    ${Printout}    ${Sample_Output_Directory}/unicode24_sample_text.png
+
 
 *** Keywords ***
 Set Printer Option ${option:\d+} To ${setting:\d+}
