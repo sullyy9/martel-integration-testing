@@ -6,8 +6,8 @@ Library             printer.Printer
 Library             printout.ComparisonLibrary
 Resource            configuration_options.resource
 
-Suite Setup         Connect To Printer Comm Interfaces
-Suite Teardown      Disconnect From Printer Comm Interfaces
+Suite Setup         Open Printer USB Interface
+Suite Teardown      Close Printer USB Interface
 Test Teardown       Run Keywords
 ...                     Save Comparison If Test Failed    AND
 ...                     Set Option ${Default Font} To 1

@@ -1,7 +1,10 @@
-import serial
-import serial.tools.list_ports
 from enum import Enum
 
+import serial
+import serial.tools.list_ports
+from serial.tools.list_ports_common import ListPortInfo
+
+from robot.api import Error, FatalError
 from robot.api.deco import keyword, library
 from robot.libraries import Dialogs
 
@@ -20,14 +23,12 @@ DEBUG_SET_OPTION = bytearray([ESC, NULL, NULL, ord('O')])
 
 COMMAND_RESET = bytearray([ESC, ord('@')])
 
-class Interface(Enum):
-    USB = 1
-    RS232 = 2
-    INFRARED = 3
-    BLUETOOTH = 4
 
-class PrinterNotFound(Exception):
-    pass
+class Interface(str, Enum):
+    USB = 'USB'
+    RS232 = 'RS232'
+    INFRARED = 'IR'
+    BLUETOOTH = 'BT'
 
 
 class PrinterInterfaceError(Exception):
@@ -37,30 +38,31 @@ class PrinterInterfaceError(Exception):
 @library(scope='GLOBAL')
 class Printer:
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.mech_emulator = LTPD245Emulator()
-        self.usb = PrinterInterfaceUSB()
-    
-    def __del__(self):
+        self.usb = None
+
+    def __del__(self) -> None:
         self.shutdown()
 
-    def __enter__(self):
+    def __enter__(self) -> 'Printer':
         return self
 
-    def __exit__(self, exc_type, exc_value, exc_traceback):
+    def __exit__(self, exc_type, exc_value, exc_traceback) -> None:
         self.__del__()
 
     @keyword('Startup Printer')
-    def startup(self):
+    def startup(self) -> None:
         pass
 
     @keyword('Shutdown Printer')
-    def shutdown(self):
+    def shutdown(self) -> None:
         self.mech_emulator.end()
-        self.usb.disconnect()
+        if self.usb is not None:
+            self.usb.disconnect()
 
     @keyword('Wait Until Print Complete')
-    def wait_until_print_complete(self):
+    def wait_until_print_complete(self) -> None:
         self.mech_emulator.wait_until_print_complete()
 
     @keyword('Last Printout')
@@ -91,41 +93,134 @@ class Printer:
         )
 
         self.usb = PrinterInterfaceUSB(port_name)
-        self.usb.connect()
-    
-    @keyword(name='Disconnect From Printer Comm Interfaces')
-    def deinit_comms(self):
-        self.usb.disconnect()
+
+    @keyword(name='Open Printer ${interface} Interface')
+    def open_comms_interface(self, interface: Interface) -> None:
+        """
+        Open a communication interface to the printer.
+
+        Parameters
+        ----------
+        interface : Interface
+            The communication interface to open.
+
+        Raises
+        ------
+        PrinterInterfaceError
+            If an invalid interface is specified or the specified communication
+            interface has not been initialised.
+
+        """
+        match interface:
+            case Interface.USB if self.usb is not None:
+                self.usb.connect()
+            case _:
+                raise Error(
+                    f'Cannot open {interface} interface.' +
+                    'The interface has not been initialised.'
+                )
+
+    @keyword(name='Close Printer ${interface} Interface')
+    def close_comms_interface(self, interface: Interface) -> None:
+        """
+        Close a communication interface to the printer.
+
+        Parameters
+        ----------
+        interface : Interface
+            The communication interface to close.
+
+        Raises
+        ------
+        PrinterInterfaceError
+            If an invalid interface is specified or the specified communication
+            interface has not been initialised.
+
+        """
+        match interface:
+            case Interface.USB if self.usb is not None:
+                self.usb.disconnect()
+            case _:
+                raise Error(
+                    f'Cannot close {interface} interface.' +
+                    'The interface has not been initialised.'
+                )
 
     @keyword('Print ${text}')
-    def print(self, text: str, interface: Interface = Interface.USB):
-        self.mech_emulator.start()
-        match interface:
-            case Interface.USB:
-                self.usb.send(text.encode(encoding='ascii'))
-            case Interface.RS232:
-                raise InterfaceNotAvailable()
-            case Interface.INFRARED:
-                raise InterfaceNotAvailable()
-            case Interface.BLUETOOTH:
-                raise InterfaceNotAvailable()
+    def print(self, text: str, interface: Interface = Interface.USB) -> None:
+        """
+        Print text.
 
+        Parameters
+        ----------
+        text : str
+            Text string to be printed.
+
+        interface : Interface
+            Specifies the interface that should be used to transmit the text to
+            the printer. Default is USB.
+
+        Raises
+        ------
+        PrinterInterfaceError
+            If an invalid interface is specified or the specified communication
+            interface has not been initialised.
+
+        """
+        match interface:
+            case Interface.USB if self.usb is not None:
+                self.mech_emulator.start()
+                self.usb.send(text.encode(encoding='ascii'))
+            case _:
+                raise Error(
+                    f'Cannot print over {interface}.' +
+                    'The interface is not connected.'
+                )
+
+    @keyword('Send Printer Command')
+    def send_command(self, command: bytearray, interface: Interface = Interface.USB) -> None:
+        match interface:
+            case Interface.USB if self.usb is not None:
+                self.usb.send(command)
+            case _:
+                raise Error(
+                    f'Cannot send command over {interface}.' +
+                    'The interface is not connected.'
+                )
+
+    """
+    Convinience functions for sending specific commands.
+    """
     @keyword(name='Reset Printer')
-    def reset(self):
-        self.usb.send(COMMAND_RESET)
+    def reset(self) -> None:
+        self.send_command(COMMAND_RESET)
 
     @keyword(name='Enable Printer Debug Mode')
-    def enable_debug(self):
-        self.usb.send(ENABLE_DEBUG)
+    def enable_debug(self) -> None:
+        self.send_command(ENABLE_DEBUG)
 
     @keyword('Print Selftest')
-    def print_selftest(self):
+    def print_selftest(self) -> None:
         self.mech_emulator.start()
-        self.usb.send(DEBUG_PRINT_SELFTEST)
+        self.send_command(DEBUG_PRINT_SELFTEST)
 
     @keyword(name='Set Printer Option')
-    def set_option(self, option: int, setting: int):
-        self.usb.send(DEBUG_SET_OPTION + bytes([option, setting]))
+    def set_option(self, option: int, setting: int) -> None:
+        """
+        Set a configuration option. The option will have no effect until the
+        printer is reset.
+
+        Parameters
+        ----------
+        option : int
+            Option number.
+
+        setting : int
+            Setting number.
+
+        """
+        self.send_command(DEBUG_SET_OPTION + bytes([option, setting]))
+
 
 class PrinterInterfaceUSB():
     VIDs: list[int] = [0x483]
