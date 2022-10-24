@@ -3,7 +3,7 @@ import serial.tools.list_ports
 from enum import Enum
 
 from robot.api.deco import keyword, library
-from PIL import Image
+from robot.libraries import Dialogs
 
 from printer_mech import LTPD245Emulator
 from printout import Printout
@@ -29,8 +29,10 @@ class Interface(Enum):
 class PrinterNotFound(Exception):
     pass
 
-class InterfaceNotAvailable(Exception):
+
+class PrinterInterfaceError(Exception):
     pass
+
 
 @library(scope='GLOBAL')
 class Printer:
@@ -65,8 +67,30 @@ class Printer:
     def get_last_printout(self) -> Printout:
         return self.mech_emulator.get_last_printout()
 
-    @keyword(name='Connect To Printer Comm Interfaces')
-    def init_comms(self):
+    @keyword(name='Ask User To Select Printer USB Port')
+    def select_usb_port(self) -> None:
+        """
+        Open a dialog and ask the user to select which USB port the printer
+        is connected to. The dialog will only contain devices which have a VID
+        and PID matching that of a printer.
+
+        Raises
+        ------
+        FatalError
+            If devices are found with the correct VID or PID.
+
+        """
+        ports = PrinterInterfaceUSB.find_devices()
+        if len(ports) < 1:
+            raise FatalError('Unable to find any printer USB connection.')
+
+        port_names = [port.name for port in ports]
+        port_name = Dialogs.get_selection_from_user(
+            'Select the printers USB port',
+            *port_names
+        )
+
+        self.usb = PrinterInterfaceUSB(port_name)
         self.usb.connect()
     
     @keyword(name='Disconnect From Printer Comm Interfaces')
@@ -104,41 +128,56 @@ class Printer:
         self.usb.send(DEBUG_SET_OPTION + bytes([option, setting]))
 
 class PrinterInterfaceUSB():
-    def __init__(self):
-        self.port_info = None
-        self.port = None
-    
-    def __del__(self):
-        if self.port is not None and self.port.isOpen():
+    VIDs: list[int] = [0x483]
+    PIDs: list[int] = [0x1, 0x5740]
+
+    def __init__(self, port_name: str) -> None:
+        ports = serial.tools.list_ports.comports()
+        if port_name not in [port.name for port in ports]:
+            raise PrinterInterfaceError(
+                f'Attempted to connect to {port_name}.'
+                'However a port with that name does not exist.'
+            )
+
+        self.port_info = next(port for port in ports if port.name == port_name)
+        self.port = serial.Serial(port_name)
+
+    def __del__(self) -> None:
+        if self.port.isOpen():
             self.port.close()
 
-    def connect(self):
+    @staticmethod
+    def find_devices() -> list[ListPortInfo]:
+        """
+        Return a list of USB devices matching the VID and PID of a printer.
+
+        Returns
+        -------
+        list[ListPortInfo]
+            List of devices which match a printer's USB signature.
+
+        """
         ports = serial.tools.list_ports.comports()
-        try:
-            self.port_info = next(
-                port for port in ports if port.vid == PRINTER_VID and port.pid in PRINTER_PID)
+        return [port for port in ports if
+                port.vid in PrinterInterfaceUSB.VIDs and
+                port.pid in PrinterInterfaceUSB.PIDs]
 
-            self.port = serial.Serial(self.port_info.name)
-        except StopIteration as exc:
-            raise PrinterNotFound(
-                'Cannot find the printers serial port') from exc
-    
-    def disconnect(self):
-        if self.port is not None and self.port.isOpen():
-            self.port = self.port.close()
-            self.port_info = None
-            
-    
-    def get_port_name(self):
-        if self.port_info is not None:
-            return self.port_info.name
+    def connect(self) -> None:
+        if not self.port.isOpen():
+            self.port.open()
 
-    def send(self, data: bytes):
-        if self.port is not None and self.port.isOpen():
+    def disconnect(self) -> None:
+        if self.port.isOpen():
+            self.port.close()
+
+    def get_port_name(self) -> None:
+        return self.port_info.name
+
+    def send(self, data: bytes) -> None:
+        if self.port.isOpen():
             self.port.write(data)
             self.port.flush()
 
-    def flush(self):
-        if self.port is not None and self.port.isOpen():
+    def flush(self) -> None:
+        if self.port.isOpen():
             self.port.flush()
-    

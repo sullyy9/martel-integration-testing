@@ -5,5 +5,7 @@ Documentation       Integration testing suite for Martel MCP1800 B series
 Library             printer.Printer
 Library             printout.ComparisonLibrary
 
-Suite Setup         Create Comparison Library Output Directories
+Suite Setup         Run Keywords
+...                     Create Comparison Library Output Directories
+...                     Ask User To Select Printer USB Port
 Suite Teardown      Shutdown Printer
