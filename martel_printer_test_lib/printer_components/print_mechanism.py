@@ -8,30 +8,11 @@ import tempfile
 
 import cv2
 import numpy
-from numpy import ndarray, uint8
 
 from analyser import Analyser
 from printout import Printout
 
 DOTS_PER_LINE = 384
-
-""""
-# => Feed paper (forward)
-# <= Reverse
-MOTOR_SEQUENCE = [0b1100, 0b0110, 0b0011, 0b1001]
-
-# Find the next state of the motor moving forwards.
-
-def next_forward(state):
-    (state << 1) | (state >> (3))
-
-# Find the next state of the motor moving backwards.
-
-
-def next_backward(state):
-    (state >> 1) | (state << (3))
-"""
-
 
 class LTPD245Emulator:
 
@@ -227,12 +208,10 @@ class PaperBuffer:
 
         The method of calculating the darkness of a burned dot needs improvement.
         """
-        # img = Image.new('L', (DOTS_PER_LINE, len(self.buffer)))
-        # img = ndarray((len(self.buffer), DOTS_PER_LINE), dtype=uint8)
         data = [max(0, 255 - int(math.ceil(pixel * 25000.0)))
                 for row in self.buffer for pixel in row]
 
-        img = numpy.asarray(data, uint8)
+        img = numpy.asarray(data, numpy.uint8)
         img = numpy.reshape(img, (-1, DOTS_PER_LINE))
 
         border = int(DOTS_PER_LINE * 0.10)

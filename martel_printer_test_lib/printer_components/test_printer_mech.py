@@ -1,7 +1,7 @@
 import unittest
 import itertools
 
-from printer_mech import PaperBuffer
+from print_mechanism import PaperBuffer
 
 
 class TestPaperBuffer(unittest.TestCase):

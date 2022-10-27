@@ -16,7 +16,6 @@ STEPPER_EN = 6
 class AnlayserNotFound(Exception):
     pass
 
-
 class Analyser:
     def __init__(self):
         self.manager: automation.Manager | None = None
