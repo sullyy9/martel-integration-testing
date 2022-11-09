@@ -10,6 +10,9 @@
     ],
     "robot.language-server.python": "${workspaceFolder}/.venv/Scripts/python.exe",
     "robot.pythonpath": [
-        "${workspaceFolder}/martel_printer_test_lib"
+        "${workspaceFolder}/martel_printer_test_lib",
     ],
+    "robot.variables": {
+        "OUTPUT DIR": "${workspaceFolder}/output"
+    }
 }

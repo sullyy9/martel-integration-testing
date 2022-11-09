@@ -7,5 +7,7 @@ Library             printout.ComparisonLibrary
 
 Suite Setup         Run Keywords
 ...                     Create Comparison Library Output Directories
-...                     Ask User To Select Printer USB Port
+...                     Create Printer Library Output Directories
+...                     Select Printer Mechanism
+...                     Select Printer USB Port
 Suite Teardown      Shutdown Printer
