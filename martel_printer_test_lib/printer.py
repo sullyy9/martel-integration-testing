@@ -7,8 +7,8 @@ from robot.api.deco import keyword, library
 from robot.libraries import Dialogs
 from robot.libraries.BuiltIn import BuiltIn, RobotNotRunningError
 
-from printer_components import USBInterface
-from printer_components import PrintMechAnalyzer, LTPD245Emulator, EyeballMk1
+from comms import USBInterface
+from mech import PrintMechAnalyzer, LTPD245Emulator, EyeballMk1
 
 from printout import Printout
 

@@ -42,7 +42,7 @@ class AnalyserExportError(Exception):
     pass
 
 
-class Analyser:
+class SaleaeLogic8:
     __slots__ = ('__weakref__', '_manager', '_device', '_capture',
                  '_capture_running', 'cleanup')
 
