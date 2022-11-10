@@ -1,6 +1,6 @@
-from pathlib import Path
 import os
 import itertools
+from pathlib import Path
 
 import cv2
 import numpy
@@ -20,8 +20,6 @@ RED_BGR = (0, 0, 255)
 
 
 # Exceptions
-
-
 class InvalidFormat(Exception):
     pass
 
@@ -220,7 +218,6 @@ class PrintoutLinesIter:
 
 @library(scope='GLOBAL')
 class ComparisonLibrary:
-    PRINTOUT_DIR = 'printout'
     COMPARISON_DIR = 'comparison'
     SAMPLE_DIR = 'samples'
 
@@ -228,7 +225,6 @@ class ComparisonLibrary:
         self.sample = None
 
         self.output_path = Path(os.getcwd(), 'output').absolute()
-        self.printout_path = Path(self.output_path, self.PRINTOUT_DIR)
         self.comparison_path = Path(self.output_path, self.COMPARISON_DIR)
         self.sample_path = Path(os.getcwd(), self.SAMPLE_DIR)
 
@@ -244,12 +240,10 @@ class ComparisonLibrary:
         self.output_path = Path(
             BuiltIn().get_variable_value("${OUTPUT DIR}")).absolute()
 
-        self.printout_path = Path(self.output_path, self.PRINTOUT_DIR)
         self.compare_path = Path(self.output_path, self.COMPARISON_DIR)
         self.sample_path = Path(os.getcwd(), self.SAMPLE_DIR)
 
         os.makedirs(self.compare_path, exist_ok=True)
-        os.makedirs(self.printout_path, exist_ok=True)
 
     @keyword('Load Sample ${filename}')
     def load_sample(self, filename: str):
@@ -346,7 +340,3 @@ class ComparisonLibrary:
             f"*HTML* <img src='{img_path}' width='100%'/>",
             append=True
         )
-
-    @keyword('Save Printout')
-    def save_printout(self, printout: Printout, filename: str):
-        printout.save(Path(self.printout_path, filename))
