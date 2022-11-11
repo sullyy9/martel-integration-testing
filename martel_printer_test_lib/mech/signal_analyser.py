@@ -31,7 +31,7 @@ TRIGGER_CAPTURE_CONFIG = automation.CaptureConfiguration(
 
 DEVICE_CONFIG = automation.LogicDeviceConfiguration(
     enabled_digital_channels=list(PinConfig),
-    digital_sample_rate=25_000_000,
+    digital_sample_rate=40_000_000,
 )
 
 class AnlayserInitError(Exception):

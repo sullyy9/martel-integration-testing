@@ -16,7 +16,7 @@ Numbering on topside aligns with numbering on schematic.
 39      PaperSensor
 40      VPS
 41      GND
-42      HS
+42      PlatenSensor
 43      NC
 44-45   GND
 46      NC
@@ -29,6 +29,8 @@ Numbering on topside aligns with numbering on schematic.
 
 Internal Connections:
 Connect  PaperSensor(39) to GND(41)
+Connect  PlatenSensor(42) to GND(44)
+Connect  VTHERM(20) to GND(19) through a 33K resistor
 
 Analyzer Connections:
 0 => SPICLK(8)
@@ -70,8 +72,6 @@ poetry config virtualenvs.in-project true
 
 ---
 
-Print x, it'll take y seconds.
-|
-v 
-Printer <- print(text, time=time, name=None, save_printout=false, save_csv=false)
-Interface Analyzer
+!! On 433's the LAT pulse width is ~25ns.
+!! This is on the edge of what the analyser can detect and is below the 100ns
+!! specified in the mech datasheet.
