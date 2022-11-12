@@ -1,1 +1,2 @@
-from .usb import USBInterface, PrinterInterfaceError
+from .interface import CommunicationInterface
+from .usb import USBInterface, USBConnectError

@@ -8,6 +8,7 @@ from robot.libraries import Dialogs
 from robot.libraries.BuiltIn import BuiltIn, RobotNotRunningError
 
 from comms import USBInterface
+from comms import CommunicationInterface
 from mech import PrintMechAnalyzer, LTPD245Emulator, EyeballMk1
 
 from printout import Printout
@@ -46,15 +47,14 @@ class Printer:
         self._printouts_path: Optional[Path] = None
 
         self.mech: Optional[PrintMechAnalyzer] = None
-        self.usb = None
+        self.usb:Optional[CommunicationInterface] = None
 
     def __del__(self) -> None:
         self.shutdown()
 
     @keyword('Shutdown Printer')
     def shutdown(self) -> None:
-        if self.usb:
-            self.usb.disconnect()
+        pass
 
     @keyword('Select Printer Mechanism')
     def select_printer_mechanism(
@@ -84,9 +84,14 @@ class Printer:
     @keyword('Select Printer USB Port')
     def select_usb_port(self, port_name: Optional[str] = None) -> None:
         """
-        Open a dialog and ask the user to select which USB port the printer
-        is connected to. The dialog will only contain devices which have a VID
-        and PID matching that of a printer.
+        Select the port to use for the USB interface. If none is specified,
+        open a dialog and ask the user to select one. The dialog will only
+        contain devices which have a VID and PID matching that of a printer.
+        
+        Parameters
+        ----------
+        port_name : Optional[str]
+            Name of the port. e.g. 'COM6'
 
         Raises
         ------
@@ -94,24 +99,31 @@ class Printer:
             If devices are found with the correct VID or PID.
 
         """
-        ports = USBInterface.find_devices()
+        ports = USBInterface.get_valid_ports()
         if len(ports) < 1:
             raise FatalError('Unable to find any printer USB connection.')
 
         port_names = [port.name for port in ports]
 
-        if port_name and port_name in port_names:
+        if port_name:
+            if port_name not in port_names:
+                raise FatalError(
+                    'Unable to find a printer on port {port_name}.'
+                )
+
             self.usb = USBInterface(port_name)
-        elif port_name and port_name not in port_names:
-            raise FatalError('Unable to find a printer on port {port_name}.')
+
         else:
-            port_name = Dialogs.get_selection_from_user(
+            selected_port = Dialogs.get_selection_from_user(
                 'Select the printers USB port',
-                *port_names
+                *ports
             )
 
-            if port_name:
-                self.usb = USBInterface(port_name)
+            # Search through the ports to find the name of the one that was
+            # selected.
+            self.usb = USBInterface(
+                next(p.name for p in ports if str(p) == selected_port)
+            )
 
     @keyword('Create Printer Library Output Directories')
     def create_output_directories(
@@ -186,7 +198,7 @@ class Printer:
         """
         match interface:
             case CommsInterface.USB if self.usb is not None:
-                self.usb.connect()
+                self.usb.open()
             case _:
                 raise Error(
                     f'Cannot open {interface} interface.' +
@@ -212,7 +224,7 @@ class Printer:
         """
         match interface:
             case CommsInterface.USB if self.usb is not None:
-                self.usb.disconnect()
+                self.usb.close()
             case _:
                 raise Error(
                     f'Cannot close {interface} interface.' +
