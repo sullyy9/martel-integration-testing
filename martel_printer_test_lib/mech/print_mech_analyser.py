@@ -7,9 +7,12 @@ from typing import Self
 import weakref
 from weakref import finalize
 
+from robot.libraries.BuiltIn import BuiltIn
+
+from . import printout_generation
 from printout import Printout
 from .signal_analyser import SaleaeLogic8
-from .printout_generation import MechInputRecords, PrintMechState, PaperBuffer
+from .printout_generation import PrintMechState, PaperBuffer
 
 class MechPrintError(Exception):
     pass
@@ -194,11 +197,12 @@ class LTPD245Emulator(PrintMechAnalyzer):
             raise MechPrintError('Cannot get last printout as none exists')
 
     def _generate_image_from_capture(self, capture: Path) -> Printout:
-        with MechInputRecords(capture) as mech_capture:
-            print_mech = PrintMechState(next(mech_capture))
-            for state in mech_capture:
-                print_mech.update(state)
-
+        states = printout_generation.read_mech_input(capture)
+        print_mech = PrintMechState(next(states))
+        
+        for state in states:
+            print_mech.update(state)
+        
         return print_mech.get_printout()
 
 

@@ -1,7 +1,6 @@
 import csv
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Self
 
 import cv2
 
@@ -13,37 +12,34 @@ from printout import Printout
 
 DOTS_PER_LINE = 384
 
-@dataclass
+
+@dataclass(slots=True)
 class MechInput:
-    def __init__(self, state: list[str]):
-        self.timestamp = float(state[0])
-        self.spi_clock = int(state[1])
-        self.spi_data = int(state[2])
-        self.latch = int(state[3])
-        self.dst = int(state[4])
-
-        motor_al = int(state[5])
-        motor_bl = int(state[6])
-        self.motor_state = (motor_bl << 1) + (motor_al << 0)
+    timestamp: float
+    spi_clock: int
+    spi_data: int
+    latch: int
+    dst: int
+    motor_state: int
 
 
-class MechInputRecords:
-    def __init__(self, csv_path: Path) -> None:
-        self.file = open(csv_path, 'r', encoding='utf-8')
-        self.history = csv.reader(self.file)
-        next(self.history)  # Skip the header row.
+def read_mech_input(csv_path: Path):
+    with open(csv_path, 'r', encoding='utf-8') as file:
+        states = csv.reader(file)
+        next(states, None)  # Skip the header row.
 
-    def __enter__(self) -> Self:
-        return self
+        for state in states:
+            motor_al = int(state[5])
+            motor_bl = int(state[6])
 
-    def __exit__(self, exc_type, exc_value, exc_traceback):
-        self.file.close()
-
-    def __iter__(self) -> Self:
-        return self
-
-    def __next__(self) -> MechInput:
-        return MechInput(next(self.history))
+            yield MechInput(
+                timestamp=float(state[0]),
+                spi_clock=int(state[1]),
+                spi_data=int(state[2]),
+                latch=int(state[3]),
+                dst=int(state[4]),
+                motor_state=(motor_bl << 1) + (motor_al << 0)
+            )
 
 
 class PrintMechState:
@@ -51,70 +47,74 @@ class PrintMechState:
     Simulation of the current state of the printer's print mechanism.
 
     """
-    def __init__(self, initial_input: MechInput) -> None:
-        self.last_input: MechInput = initial_input
-        self.shift_register: NDArray[uint8] = np.zeros(DOTS_PER_LINE, uint8)
-        self.latch_register: NDArray[uint8] = np.zeros(DOTS_PER_LINE, uint8)
-        self.paper: PaperBuffer = PaperBuffer()
 
-        self.burn_time: float = 0.0
-        self.motor_steps: int = 0
+    __slots__ = ('_last_input', '_shift_register', '_latch_register', '_paper',
+                 '_burn_time', '_motor_steps')
 
-    def update(self, mech_input: MechInput) -> None:
+    def __init__(self, initial_state: MechInput) -> None:
+        self._shift_register: NDArray[uint8] = np.zeros(DOTS_PER_LINE, uint8)
+        self._latch_register: NDArray[uint8] = np.zeros(DOTS_PER_LINE, uint8)
+        self._last_input: MechInput = initial_state
+        self._paper: PaperBuffer = PaperBuffer()
+
+        self._burn_time: float = 0.0
+        self._motor_steps: int = 0
+
+    def update(self, input: MechInput) -> None:
         # DST controls the activation of the thermal head
         # along with the data in the latch register
-        if self.last_input.dst == 1:
-            self.burn_time += mech_input.timestamp - self.last_input.timestamp
+        if self._last_input.dst == 1:
+            self._burn_time += input.timestamp - self._last_input.timestamp
 
         # Data in the shift register is transfered to the latch
         # register when the latch is pulled low.
-        if self.last_input.latch == 1 and mech_input.latch == 0:
-            self.burn_latch_register()
-            self.latch_register = self.shift_register.copy()
+        if self._last_input.latch == 1 and input.latch == 0:
+            self._burn_latch_register()
+            self._latch_register = self._shift_register.copy()
 
         # Data bits are valid on the clock's rising edge.
         # The bits get shifted in to the shift register.
-        if mech_input.spi_clock == 1 and self.last_input.spi_clock == 0:
-            self.shift_register[0:-1] = self.shift_register[1:]
-            self.shift_register[-1] = mech_input.spi_data
+        if input.spi_clock == 1 and self._last_input.spi_clock == 0:
+            self._shift_register[0:-1] = self._shift_register[1:]
+            self._shift_register[-1] = input.spi_data
 
         # One dot line is 4 steps.
-        if mech_input.motor_state != self.last_input.motor_state:
-            self.motor_steps += 2  # 2 steps every state change
-            if self.motor_steps == 2:
-                self.burn_latch_register(between_lines=True)
-            elif self.motor_steps >= 4:
-                self.burn_latch_register()
-                self.advance_line()
-                self.motor_steps = 0
+        if input.motor_state != self._last_input.motor_state:
+            self._motor_steps += 2  # 2 steps every state change
+            if self._motor_steps == 2:
+                self._burn_latch_register(between_lines=True)
+            elif self._motor_steps >= 4:
+                self._burn_latch_register()
+                self._advance_line()
+                self._motor_steps = 0
 
-        self.last_input = mech_input
+        self._last_input = input
 
-    def burn_latch_register(self, between_lines: bool = False) -> None:
+    def _burn_latch_register(self, between_lines: bool = False) -> None:
         """
         Burn a dot line into the paper, simulating activation of the thermal
         head.
 
         """
-        burn_buffer = self.latch_register * self.burn_time
+        burn_buffer = self._latch_register * self._burn_time
 
-        self.paper.burn_line(burn_buffer, between_lines=between_lines)
-        self.burn_time = 0.0
+        self._paper.burn_line(burn_buffer, between_lines=between_lines)
+        self._burn_time = 0.0
 
-    def advance_line(self) -> None:
+    def _advance_line(self) -> None:
         """
         Advance the paper by 1 dot line.
 
         """
-        self.paper.new_line()
+        self._paper.new_line()
 
     def get_printout(self) -> Printout:
         """
         Return the image that has been burned into the paper.
 
         """
-        self.burn_latch_register()
-        return self.paper.as_printout()
+        self._burn_latch_register()
+        return self._paper.as_printout()
 
 
 class PaperBuffer:
@@ -127,12 +127,15 @@ class PaperBuffer:
 
     """
 
+    __slots__ = ('_buffer')
+
     def __init__(self) -> None:
         """
         Initialise the paper buffer with 2 lines.
 
         """
-        self.buffer: NDArray[float64] = np.zeros([2, DOTS_PER_LINE])
+        self._buffer: NDArray[float64] = np.zeros([2, DOTS_PER_LINE])
+        self._buffer: NDArray[float64] = np.zeros([2, DOTS_PER_LINE])
 
     def new_line(self) -> None:
         """
@@ -141,7 +144,7 @@ class PaperBuffer:
         Visualy, this line is located at the bottom of the paper.
 
         """
-        self.buffer = np.vstack([self.buffer, np.zeros(DOTS_PER_LINE)])
+        self._buffer = np.vstack([self._buffer, np.zeros(DOTS_PER_LINE)])
 
     def burn_line(self,
                   line_buffer: NDArray[float64],
@@ -157,11 +160,9 @@ class PaperBuffer:
         between 2 lines, both will be burned.
 
         """
+        self._buffer[-2, :] += line_buffer
         if between_lines:
-            self.buffer[-2, :] += line_buffer
-            self.buffer[-1, :] += line_buffer
-        else:
-            self.buffer[-2, :] += line_buffer
+            self._buffer[-1, :] += line_buffer
 
     def as_printout(self) -> Printout:
         """
@@ -170,12 +171,15 @@ class PaperBuffer:
         TODO Burn time to pixel darkness could use some work.
 
         """
-        self.buffer = np.ceil((self.buffer * 2500000.0))
+        self._buffer *= 25000  # Make each pixel an appropriate level of grey.
+
+        # Ensures that very faint pixels have at least the minimum grey level.
+        np.ceil(self._buffer, self._buffer)
 
         # Map each element between 255 and 0 where:
         #   - 255 is white.
         #   - 0 is black.
-        img: NDArray[uint8] = np.maximum(255 - self.buffer, 0).astype(uint8)
+        img: NDArray[uint8] = np.maximum(255 - self._buffer, 0).astype(uint8)
 
         border = int(DOTS_PER_LINE * 0.10)
         img = cv2.copyMakeBorder(
