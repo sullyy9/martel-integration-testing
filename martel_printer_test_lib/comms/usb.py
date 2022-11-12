@@ -78,23 +78,3 @@ class USBInterface(CommunicationInterface):
         return [port for port in ports if
                 port.vid in USBInterface._VIDS and
                 port.pid in USBInterface._PIDS]
-
-    def open(self) -> None:
-        if not self._port.isOpen():
-            self._port.open()
-
-    def close(self) -> None:
-        if self._port.isOpen():
-            self._port.close()
-
-    def send(self, data: bytes) -> None:
-        if self._port.isOpen():
-            self._port.write(data)
-            self._port.flush()
-
-    def flush(self) -> None:
-        if self._port.isOpen():
-            self._port.flush()
-
-    def receive(self) -> Optional[bytes]:
-        return self._port.read_all()
