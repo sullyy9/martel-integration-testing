@@ -37,7 +37,7 @@ Default Font 1 Should Be Arial16
     [Tags]    arial16
 
     Set Option ${DEFAULT FONT} To 1
-    Print ${SAMPLE TEXT}
+    Print    ${SAMPLE TEXT}
     Wait Until Print Complete
     Printout Should Match ${ARIAL16 SAMPLE}
 
@@ -48,7 +48,7 @@ Default Font 2 Should Be Arial12
     [Tags]    arial12
 
     Set Option ${DEFAULT FONT} To 2
-    Print ${SAMPLE TEXT}
+    Print    ${SAMPLE TEXT}
     Wait Until Print Complete
     Printout Should Match ${ARIAL12 SAMPLE}
 
@@ -59,7 +59,7 @@ Default Font 3 Should Be Arial9
     [Tags]    arial9
 
     Set Option ${DEFAULT FONT} To 3
-    Print ${SAMPLE TEXT}
+    Print    ${SAMPLE TEXT}
     Wait Until Print Complete
     Printout Should Match ${ARIAL9 SAMPLE}
 
@@ -70,7 +70,7 @@ Default Font 4 Should Be Arial8
     [Tags]    arial8
 
     Set Option ${DEFAULT FONT} To 4
-    Print ${SAMPLE TEXT}
+    Print    ${SAMPLE TEXT}
     Wait Until Print Complete
     Printout Should Match ${ARIAL8 SAMPLE}
 
@@ -81,7 +81,7 @@ Default Font 5 Should Be Unicode16
     [Tags]    unicode16
 
     Set Option ${DEFAULT FONT} To 5
-    Print ${SAMPLE TEXT}
+    Print    ${SAMPLE TEXT}
     Wait Until Print Complete
     Printout Should Match ${UNICODE16 SAMPLE}
 
@@ -92,7 +92,7 @@ Default Font 6 Should Be Unicode12
     [Tags]    unicode12
 
     Set Option ${DEFAULT FONT} To 6
-    Print ${SAMPLE TEXT}
+    Print    ${SAMPLE TEXT}
     Wait Until Print Complete
     Printout Should Match ${UNICODE12 SAMPLE}
 
@@ -103,7 +103,7 @@ Default Font 7 Should Be Unicode8
     [Tags]    unicode8
 
     Set Option ${DEFAULT FONT} To 7
-    Print ${SAMPLE TEXT}
+    Print    ${SAMPLE TEXT}
     Wait Until Print Complete
     Printout Should Match ${UNICODE8 SAMPLE}
 

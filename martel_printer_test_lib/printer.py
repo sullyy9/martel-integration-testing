@@ -231,9 +231,11 @@ class Printer:
                     'The interface has not been initialised.'
                 )
 
-    @keyword('Print ${text}')
-    def print(self, text: str,
-              interface: CommsInterface = CommsInterface.USB) -> None:
+    @keyword('Print')
+    def print(self,
+              text: str,
+              interface: CommsInterface = CommsInterface.USB,
+              name: Optional[str] = None) -> None:
         """
         Print text.
 
@@ -246,6 +248,9 @@ class Printer:
             Specifies the interface that should be used to transmit the text to
             the printer. Default is USB.
 
+        name : Optional[str]
+            An optional name given to any created files.
+
         Raises
         ------
         PrinterInterfaceError
@@ -253,9 +258,11 @@ class Printer:
             interface has not been initialised.
 
         """
+        if name is None:
+            name = self._get_test_name_or_none()
 
         if self.mech:
-            self.mech.start_capture(name=self._get_test_name_or_none())
+            self.mech.start_capture(name)
         else:
             raise Error(
                 'Attempted to use print mechanism but none has been selected.'
