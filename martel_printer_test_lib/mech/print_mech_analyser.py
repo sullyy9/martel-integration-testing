@@ -155,6 +155,7 @@ class LTPD245Emulator(PrintMechAnalyzer):
         """
         self._capture_name = name
         self._analyser.start_print_capture()
+        time.sleep(0.1) # Give the analyzer a little bit of time to start up.
 
     def stop_capture(self) -> None:
         pass
