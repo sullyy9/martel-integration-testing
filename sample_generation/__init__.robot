@@ -1,23 +1,12 @@
 *** Settings ***
-Documentation       Sample generation suite
+Documentation       Suite for generating digital printout samples.
 
-Library             printer.Printer
-Library             printout
 Library             OperatingSystem
 Library             DateTime
+Library             printer.Printer
 
-Suite Setup         Create Sample Output Directory
+Suite Setup         Run Keywords
+...                     Create Printer Library Output Directories
+...                     Select Printer Mechanism
+...                     Select Printer USB Port
 Suite Teardown      Shutdown Printer
-
-Force Tags          example
-
-
-*** Keywords ***
-Create Sample Output Directory
-    ${Date Time}    Get Current Date    result_format=%Y-%m-%d@%H-%M
-    ${Outdir}    Get Variable Value
-    ...    $Sample_Output_Directory
-    ...    ${CURDIR}/output/${Date Time}
-
-    Set Global Variable    $Sample_Output_Directory    ${Outdir}
-    Create Directory    ${Sample_Output_Directory}

@@ -1,4 +1,5 @@
 output/
+sample_output/
 .venv/
 .pytest_cache/
 __pycache__

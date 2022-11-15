@@ -27,9 +27,8 @@
             "command": "poetry",
             "args": [
                 "run", "robot",
-                "--outputdir", "${workspaceFolder}/output/robot",
+                "--outputdir", "${workspaceFolder}/sample_output",
                 "--pythonpath", "${workspaceFolder}/martel_printer_test_lib",
-                "--variable", "Sample_Output_Directory:${workspaceFolder}/output/samples",
                 "${workspaceFolder}/sample_generation"
             ],
             "problemMatcher": []
