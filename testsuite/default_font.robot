@@ -9,7 +9,7 @@ Resource            configuration_options.resource
 Suite Setup         Open Printer USB Interface
 Suite Teardown      Close Printer USB Interface
 Test Teardown       Run Keywords
-...                     Save Comparison If Test Failed    AND
+...                     Save Comparison If Test Failed
 ...                     Set Option ${Default Font} To 1
 
 Force Tags          config_options    default_fonts

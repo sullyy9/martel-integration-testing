@@ -17,13 +17,13 @@ from printout import Printout
 PRINTER_VID = 0x483
 PRINTER_PID = [0x1, 0x5740]
 
-ESC = 0x1B
 NULL = 0
+ESC = 0x1B
 ENABLE_DEBUG = bytearray([ESC, NULL, NULL, ord('D'), NULL])
 DEBUG_PRINT_SELFTEST = bytearray([ESC, NULL, NULL, ord('S'), 8])
 DEBUG_SET_OPTION = bytearray([ESC, NULL, NULL, ord('O')])
 
-COMMAND_RESET = bytearray([ESC, ord('@')])
+COMMAND_RESET = bytearray([ESC, NULL, ord('@')])
 
 
 class CommsInterface(str, Enum):
@@ -294,6 +294,7 @@ class Printer:
 
     """
     Convinience functions for sending specific commands.
+
     """
     @keyword(name='Reset Printer')
     def reset(self) -> None:
