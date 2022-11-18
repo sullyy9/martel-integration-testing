@@ -5,14 +5,16 @@ Library             printer.Printer
 
 
 *** Variables ***
-&{RS232 DATA BITS AND PARITY}       option=1
-...                                 8 bits none=1
-...                                 8 bits odd=2
-...                                 8 bits even=3
-...                                 7 bits odd=4
-...                                 7 bits even=5
+&{RS232 DATA BITS AND PARITY}       Option=1
+...                                 Default=1
+...                                 8 Bits None=1
+...                                 8 Bits Odd=2
+...                                 8 Bits Even=3
+...                                 7 Bits Odd=4
+...                                 7 Bits Even=5
 
-&{RS232 BAUD RATE}                  option=2
+&{RS232 BAUD RATE}                  Option=2
+...                                 Default=5
 ...                                 115200=1
 ...                                 57600=2
 ...                                 38400=3
@@ -23,28 +25,46 @@ Library             printer.Printer
 ...                                 1200=8
 ...                                 600=9
 
-&{RS232 FLOW CONTROL}               option=3
-...                                 none=1
-...                                 software=2
-...                                 hardware=3
+&{RS232 FLOW CONTROL}               Option=3
+...                                 Default=1
+...                                 None=1
+...                                 Software=2
+...                                 Hardware=3
 
-&{BLUETOOTH PAIRING}                option=4
-...                                 none=1
-...                                 standard=2
-...                                 silent=3
+&{BLUETOOTH PAIRING}                Option=4
+...                                 Default=1
+...                                 Off=1
+...                                 Standard=2
+...                                 Silent=3
 
-${DEFAULT FONT}                     5
+&{DEFAULT FONT}                     Option=5
+...                                 Default=1
+...                                 Slot 1=1
+...                                 Slot 2=2
+...                                 Slot 3=3
+...                                 Slot 4=4
+...                                 Slot 5=5
+...                                 Slot 6=6
+...                                 Slot 7=7
+...                                 Slot 8=8
 
 
 *** Keywords ***
-Set Option ${option} To ${setting}
+Set Printer Option "${config option}" To "${setting}"
+    [Documentation]
+    ...    Set the given configuration option to the given setting.
+    ...
+    ...    *Arguments*
+    ...    -----------
+    ...    ${config option}: One of the dicts defined in
+    ...    configuration_options.resource.
+    ...
+    ...    ${setting}: A key from the dict specified by ${config option}.
+
     Enable Printer Debug Mode
-    Set Printer Option    ${option}    ${setting}
+    Set Printer Option    ${config option}[Option]    ${config option}[${setting}]
     Reset Printer
     Close Printer USB Interface
     Sleep    1s
     Open Printer USB Interface
     Send Printer Command    Feed Line\n
-
-Set Printer RS232 Baud Rate To ${setting}
-    Set Option ${RS232 BAUD RATE}[option] To ${RS232 BAUD RATE}[${setting}]
