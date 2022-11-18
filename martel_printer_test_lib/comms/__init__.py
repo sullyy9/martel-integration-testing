@@ -1,2 +1,2 @@
-from .interface import CommunicationInterface
+from .interface import BaseCommsInterface, SerialCommsInterface
 from .usb import USBInterface, USBConnectError

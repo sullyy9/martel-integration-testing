@@ -1,4 +1,4 @@
-from enum import Enum
+from enum import StrEnum, unique
 from pathlib import Path
 from typing import Optional
 
@@ -7,11 +7,11 @@ from robot.api.deco import keyword, library
 from robot.libraries import Dialogs
 from robot.libraries.BuiltIn import BuiltIn, RobotNotRunningError
 
-from comms import USBInterface
-from comms import CommunicationInterface
-from mech import PrintMechAnalyzer, LTPD245Emulator, EyeballMk1
 
+from mech import PrintMechAnalyzer, LTPD245Emulator, EyeballMk1
 from printout import Printout
+from comms import BaseCommsInterface, SerialCommsInterface, USBInterface
+                   
 
 
 PRINTER_VID = 0x483
@@ -26,14 +26,16 @@ DEBUG_SET_OPTION = bytearray([ESC, NULL, NULL, ord('O')])
 COMMAND_RESET = bytearray([ESC, NULL, ord('@')])
 
 
-class CommsInterface(str, Enum):
+@unique
+class CommsInterface(StrEnum):
     USB = 'USB'
     RS232 = 'RS232'
     INFRARED = 'IR'
     BLUETOOTH = 'BT'
 
 
-class PrintMechanism(str, Enum):
+@unique
+class PrintMechanism(StrEnum):
     EYEBALLMK1 = 'Eyeball Mk1'
     LTPD245EMULATOR = 'LTPD245 Emulator'
 
@@ -47,7 +49,7 @@ class Printer:
         self._printouts_path: Optional[Path] = None
 
         self.mech: Optional[PrintMechAnalyzer] = None
-        self.usb:Optional[CommunicationInterface] = None
+        self.usb: Optional[BaseCommsInterface] = None
 
     def __del__(self) -> None:
         self.shutdown()

@@ -8,12 +8,12 @@ from serial import Serial
 import serial.tools.list_ports
 from serial.tools.list_ports_common import ListPortInfo
 
-from .interface import CommunicationInterface
+from .interface import BaseCommsInterface
 
 class USBConnectError(Exception):
     pass
 
-class USBInterface(CommunicationInterface):
+class USBInterface(BaseCommsInterface):
     """
     Interface for a printer's USB connection.
 
