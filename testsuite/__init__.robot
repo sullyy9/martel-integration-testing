@@ -10,4 +10,5 @@ Suite Setup         Run Keywords
 ...                     Create Printer Library Output Directories
 ...                     Select Printer Mechanism
 ...                     Select Printer USB Port
+...                     Select Printer RS232 Port
 Suite Teardown      Shutdown Printer
