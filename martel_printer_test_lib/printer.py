@@ -2,6 +2,8 @@ from enum import StrEnum, unique
 from pathlib import Path
 from typing import Optional
 
+from serial.tools.list_ports_common import ListPortInfo
+
 from robot.api import Error, FatalError
 from robot.api.deco import keyword, library
 from robot.libraries import Dialogs
@@ -10,8 +12,8 @@ from robot.libraries.BuiltIn import BuiltIn, RobotNotRunningError
 
 from mech import PrintMechAnalyzer, LTPD245Emulator, EyeballMk1
 from printout import Printout
-from comms import BaseCommsInterface, SerialCommsInterface, USBInterface
-                   
+from comms import (BaseCommsInterface, SerialCommsInterface, USBInterface,
+                   RS232AdapterInterface, RS232TCUInterface)
 
 
 PRINTER_VID = 0x483
@@ -35,6 +37,12 @@ class CommsInterface(StrEnum):
 
 
 @unique
+class RS232HardwareInterface(StrEnum):
+    USB_RS232_ADAPTER = 'USB to RS232 Adapter',
+    TCU = 'TCU'
+
+
+@unique
 class PrintMechanism(StrEnum):
     EYEBALLMK1 = 'Eyeball Mk1'
     LTPD245EMULATOR = 'LTPD245 Emulator'
@@ -50,6 +58,7 @@ class Printer:
 
         self.mech: Optional[PrintMechAnalyzer] = None
         self.usb: Optional[BaseCommsInterface] = None
+        self._rs232: Optional[SerialCommsInterface] = None
 
     def __del__(self) -> None:
         self.shutdown()
@@ -89,7 +98,7 @@ class Printer:
         Select the port to use for the USB interface. If none is specified,
         open a dialog and ask the user to select one. The dialog will only
         contain devices which have a VID and PID matching that of a printer.
-        
+
         Parameters
         ----------
         port_name : Optional[str]
@@ -126,6 +135,71 @@ class Printer:
             self.usb = USBInterface(
                 next(p.name for p in ports if str(p) == selected_port)
             )
+
+    @keyword('Select Printer RS232 Port')
+    def select_rs232_port(self,
+                          method: Optional[RS232HardwareInterface] = None,
+                          port_name: Optional[str] = None) -> None:
+        """
+        Select the port to use for the rs232 interface. If none is specified,
+        open a dialog and ask the user to select one.
+
+        Parameters
+        ----------
+        port_name : Optional[str]
+            Name of the port. e.g. 'COM6'
+
+        Raises
+        ------
+        FatalError
+            If no ports are found with the given name.
+
+        """
+        if not method:
+            method = Dialogs.get_selection_from_user(
+                'Select the printers RS232 hardware interface:',
+                RS232HardwareInterface.USB_RS232_ADAPTER,
+                RS232HardwareInterface.TCU
+            )
+
+        valid_ports: list[ListPortInfo]
+        match method:
+            case RS232HardwareInterface.USB_RS232_ADAPTER:
+                valid_ports = RS232AdapterInterface.get_valid_ports()
+            case RS232HardwareInterface.TCU:
+                valid_ports = RS232TCUInterface.get_valid_ports()
+            case _:
+                raise FatalError(
+                    'An invalid RS232 hardware interface has been selected.'
+                )
+
+        if len(valid_ports) < 1:
+            raise FatalError('Unable to find any printer RS232 connection.')
+
+        valid_port_names = [port.name for port in valid_ports]
+
+        # If no port has been specified, ask the user for one.
+        if port_name is None:
+            selected_port = Dialogs.get_selection_from_user(
+                'Select the printers RS232 port',
+                *valid_ports
+            )
+
+            # Search through the ports to find the name of the one that was
+            # selected.
+            port_name = next(p.name for p in valid_ports
+                             if str(p) == selected_port)
+
+        # If a port has been specified, make sure it's valid.
+        elif port_name not in valid_port_names:
+            raise FatalError('{port_name} is not a valid port.')
+
+        if port_name:
+            match method:
+                case RS232HardwareInterface.USB_RS232_ADAPTER:
+                    self._rs232 = RS232AdapterInterface(port_name)
+                case RS232HardwareInterface.TCU:
+                    self._rs232 = RS232TCUInterface(port_name)
 
     @keyword('Create Printer Library Output Directories')
     def create_output_directories(
@@ -233,6 +307,17 @@ class Printer:
                     'The interface has not been initialised.'
                 )
 
+    @keyword('Set Test System ${interface} Baud Rate To ${baud_rate}')
+    def set_baud_rate(self, interface: CommsInterface, baud_rate: int) -> None:
+        match interface:
+            case CommsInterface.RS232 if self._rs232:
+                self._rs232.set_baud_rate(baud_rate)
+            case _:
+                raise Error(
+                    f'Cannot set {interface} baud rate as the interface ' +
+                    'does not exist.'
+                )
+
     @keyword('Print')
     def print(self,
               text: str,
@@ -265,6 +350,7 @@ class Printer:
 
         if self.mech:
             self.mech.start_capture(name)
+
         else:
             raise Error(
                 'Attempted to use print mechanism but none has been selected.'
@@ -273,9 +359,13 @@ class Printer:
         match interface:
             case CommsInterface.USB if self.usb:
                 self.usb.send(text.encode(encoding='charmap'))
+                self.usb.flush()
+            case CommsInterface.RS232 if self._rs232:
+                self._rs232.send(text.encode(encoding='charmap'))
+                self._rs232.flush()
             case _:
                 raise Error(
-                    f'Cannot print over {interface}.' +
+                    f'Cannot print over {interface}. ' +
                     'The interface is not connected.'
                 )
 
