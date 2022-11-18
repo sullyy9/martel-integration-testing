@@ -5,6 +5,7 @@ Documentation       Verify that the default font settings contain the correct
 Library             printer.Printer
 Library             printout.ComparisonLibrary
 Resource            configuration_options.resource
+Resource            utils.resource
 
 Suite Setup         Open Printer USB Interface
 Suite Teardown      Close Printer USB Interface
@@ -106,19 +107,3 @@ Default Font 7 Should Be Unicode8
     Print    ${SAMPLE TEXT}
     Wait Until Print Complete
     Printout Should Match ${UNICODE8 SAMPLE}
-
-
-*** Keywords ***
-Printout Should Match ${SAMPLE}
-    Load Sample ${SAMPLE}
-    ${PRINTOUT} =    Last Printout
-    Sample Should Match ${PRINTOUT}
-
-Save Comparison If Test Failed
-    [Documentation]
-    ...    If the last test failed, generate an image comparing the
-    ...    sample and printout and save it.
-
-    ${Printout} =    Last Printout
-    Run Keyword If Test Failed
-    ...    Save Comparison    ${Printout}    ${TEST NAME}.png
