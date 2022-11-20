@@ -1,5 +1,5 @@
 *** Settings ***
-Documentation       Tests for RS232 related functionality.
+Documentation       Tests for RS232 baud rate.
 
 Library             printer.Printer
 Library             printout.ComparisonLibrary

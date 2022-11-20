@@ -1,3 +1,4 @@
+import os
 from enum import StrEnum, unique
 from pathlib import Path
 from typing import Optional
@@ -9,7 +10,7 @@ from robot.api.deco import keyword, library
 from robot.libraries import Dialogs
 from robot.libraries.BuiltIn import BuiltIn, RobotNotRunningError
 
-
+import comms
 from mech import PrintMechAnalyzer, LTPD245Emulator, EyeballMk1
 from printout import Printout
 from comms import (BaseCommsInterface, SerialCommsInterface, USBInterface,
@@ -38,7 +39,7 @@ class CommsInterface(StrEnum):
 
 @unique
 class RS232HardwareInterface(StrEnum):
-    USB_RS232_ADAPTER = 'USB to RS232 Adapter',
+    USB_RS232_ADAPTER = 'USB To RS232 Adapter'
     TCU = 'TCU'
 
 
@@ -46,6 +47,15 @@ class RS232HardwareInterface(StrEnum):
 class PrintMechanism(StrEnum):
     EYEBALLMK1 = 'Eyeball Mk1'
     LTPD245EMULATOR = 'LTPD245 Emulator'
+
+
+@unique
+class FrameFormat(StrEnum):
+    NONE_8BITS = '8 Bits None',
+    EVEN_8BITS = '8 Bits Even',
+    ODD_8BITS = '8 Bits Odd',
+    EVEN_7BITS = '7 Bits Even',
+    ODD_7BITS = '7 Bits Odd'
 
 
 @library(scope='GLOBAL')
@@ -293,7 +303,7 @@ class Printer:
 
         Raises
         ------
-        PrinterInterfaceError
+        Error
             If an invalid interface is specified or the specified communication
             interface has not been initialised.
 
@@ -316,6 +326,58 @@ class Printer:
                 raise Error(
                     f'Cannot set {interface} baud rate as the interface ' +
                     'does not exist.'
+                )
+
+    @keyword('Set Test System "${interface}" Frame Format To "${format}"')
+    def set_frame_format(self,
+                         interface: CommsInterface,
+                         format: FrameFormat | str) -> None:
+        """
+        Configure the number of data bits and the parity of a communications
+        interface.
+
+        Parameters
+        ----------
+        interface : CommsInterface
+            The communications interface to configure.
+
+        format : FrameFormat | str
+            Frame fomrat to configure the interface to use. Must be a member or
+            value of a member of FrameFormat.
+
+        Raises
+        ------
+        Error
+            If an invalid interface is specified, the specified communication
+            interface has not been initialised or if the format is invalid.
+
+        """
+
+        match format:
+            case FrameFormat.NONE_8BITS:
+                bits, parity = 8, comms.interface.Parity.NONE
+            case FrameFormat.EVEN_8BITS:
+                bits, parity = 8, comms.interface.Parity.EVEN
+            case FrameFormat.ODD_8BITS:
+                bits, parity = 8, comms.interface.Parity.ODD
+            case FrameFormat.EVEN_7BITS:
+                bits, parity = 7, comms.interface.Parity.EVEN
+            case FrameFormat.ODD_7BITS:
+                bits, parity = 7, comms.interface.Parity.ODD
+            case _:
+                raise Error(
+                    f'{format} is not a valid FrameFormat. {os.linesep}' +
+                    f'Valid formats are: {[e.value for e in FrameFormat]}'
+                )
+
+        match interface:
+            case CommsInterface.RS232 if self._rs232:
+                self._rs232.set_data_bits(bits)
+                self._rs232.set_parity(parity)
+            case _:
+                raise Error(
+                    f'{interface} is not a valid communications interface to' +
+                    f'configure the frame format. {os.linesep}'
                 )
 
     @keyword('Print')
