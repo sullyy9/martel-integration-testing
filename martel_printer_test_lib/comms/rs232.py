@@ -9,11 +9,12 @@ import serial.tools.list_ports
 from serial.tools.list_ports_common import ListPortInfo
 
 from .interface import Parity, SerialCommsInterface
-from .tcu import TCU, RelayChannel, TCUError
+from .tcu import TCU, RelayChannel, CommsMode, TCUError
 
 
 class RS232Error(Exception):
     pass
+
 
 class RS232AdapterInterface(SerialCommsInterface):
     """
@@ -84,6 +85,8 @@ class RS232TCUInterface(TCU, SerialCommsInterface):
         """
         if not self._port.isOpen():
             self._port.open()
+
+        self.set_channel(RelayChannel.COMMS_MODE, CommsMode.RS232)
 
     def close(self) -> None:
         """

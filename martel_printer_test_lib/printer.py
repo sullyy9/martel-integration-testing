@@ -285,6 +285,8 @@ class Printer:
         match interface:
             case CommsInterface.USB if self.usb is not None:
                 self.usb.open()
+            case CommsInterface.RS232 if self._rs232 is not None:
+                self._rs232.open()
             case _:
                 raise Error(
                     f'Cannot open {interface} interface.' +
@@ -311,6 +313,8 @@ class Printer:
         match interface:
             case CommsInterface.USB if self.usb is not None:
                 self.usb.close()
+            case CommsInterface.RS232 if self._rs232 is not None:
+                self._rs232.close()
             case _:
                 raise Error(
                     f'Cannot close {interface} interface.' +

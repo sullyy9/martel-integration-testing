@@ -9,11 +9,13 @@ Resource            samples.resource
 
 Suite Setup         Run Keywords
 ...                     Open Printer "USB" Interface
+...                     Open Printer "RS232" Interface
 ...                     Set Printer Option "${Default Font}" To "Default"
 ...                     Set Printer Option "&{RS232 FRAME FORMAT}" To "Default"
 ...                     Set Test System "RS232" Frame Format To "8 Bits None"
 Suite Teardown      Run Keywords
 ...                     Close Printer "USB" Interface
+...                     Close Printer "RS232" Interface
 ...                     Set Printer Option "&{RS232 BAUD RATE}" To "Default"
 ...                     Set Test System "RS232" Baud Rate To "9600"
 Test Teardown       Save Comparison If Test Failed

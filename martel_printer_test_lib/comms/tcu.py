@@ -40,6 +40,19 @@ class RelayChannel(IntEnum):
     COMMS_MODE = 0x40
     BAUD_RATE = 0x41
 
+@unique
+class CommsMode(IntEnum):
+    """
+    Communication protocols supported by the TCU for communicating with the
+    printer. For use with the RelayChannel.COMMS_MODE channel.
+
+    """
+    RS232 = 0
+    TTL = 1
+    IRDA = 6
+    RS485 = 8
+    BLUETOOTH = 9
+
 
 class TCU:
     """
