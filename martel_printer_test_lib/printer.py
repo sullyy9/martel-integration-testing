@@ -265,7 +265,7 @@ class Printer:
                 'Attempted to access print mechanism but none has been selected.'
             )
 
-    @keyword(name='Open Printer ${interface} Interface')
+    @keyword(name='Open Printer "${interface}" Interface')
     def open_comms_interface(self, interface: CommsInterface) -> None:
         """
         Open a communication interface to the printer.
@@ -291,7 +291,7 @@ class Printer:
                     'The interface has not been initialised.'
                 )
 
-    @keyword(name='Close Printer ${interface} Interface')
+    @keyword(name='Close Printer "${interface}" Interface')
     def close_comms_interface(self, interface: CommsInterface) -> None:
         """
         Close a communication interface to the printer.
@@ -317,7 +317,7 @@ class Printer:
                     'The interface has not been initialised.'
                 )
 
-    @keyword('Set Test System ${interface} Baud Rate To ${baud_rate}')
+    @keyword('Set Test System "${interface}" Baud Rate To "${baud_rate}"')
     def set_baud_rate(self, interface: CommsInterface, baud_rate: int) -> None:
         match interface:
             case CommsInterface.RS232 if self._rs232:

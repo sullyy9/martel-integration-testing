@@ -245,7 +245,7 @@ class ComparisonLibrary:
 
         os.makedirs(self.compare_path, exist_ok=True)
 
-    @keyword('Load Sample ${filename}')
+    @keyword('Load Sample "${filename}"')
     def load_sample(self, filename: str):
         try:
             self.sample = Printout.open(Path(self.sample_path, filename))
@@ -266,7 +266,7 @@ class ComparisonLibrary:
             raise SampleNotSet
         return self.sample
 
-    @keyword('Sample Should Match ${printout}')
+    @keyword('Sample Should Match "${printout}"')
     def matches(self, printout: Printout):
         if self.sample is None:
             raise SampleNotSet(

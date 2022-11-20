@@ -64,7 +64,7 @@ Set Printer Option "${config option}" To "${setting}"
     Enable Printer Debug Mode
     Set Printer Option    ${config option}[Option]    ${config option}[${setting}]
     Reset Printer
-    Close Printer USB Interface
+    Close Printer "USB" Interface
     Sleep    1s
-    Open Printer USB Interface
+    Open Printer "USB" Interface
     Send Printer Command    Feed Line\n
