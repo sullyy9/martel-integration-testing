@@ -2,7 +2,7 @@
 Documentation       Tests for RS232 baud rate.
 
 Library             printer.Printer
-Library             printout.ComparisonLibrary
+Library             printout_matching
 Resource            configuration_options.resource
 Resource            utils.resource
 Resource            samples.resource
@@ -18,7 +18,6 @@ Suite Teardown      Run Keywords
 ...                     Close Printer "RS232" Interface
 ...                     Set Printer Option "&{RS232 BAUD RATE}" To "Default"
 ...                     Set Test System "RS232" Baud Rate To "9600"
-Test Teardown       Save Comparison If Test Failed
 
 Force Tags          rs232    baud_rate
 
@@ -32,7 +31,7 @@ Test RS232 At 600 Baud
 
     Print    ${SAMPLE TEXT SHORT}    interface=RS232
     Wait Until Print Complete
-    Printout Should Match ${ARIAL16 SAMPLE SHORT}
+    Printout Should Match "${ARIAL16 SAMPLE SHORT}" Exactly
 
 Test RS232 At 1200 Baud
     [Documentation]    Verify that the given RS232 baud rate works correctly.
@@ -42,7 +41,7 @@ Test RS232 At 1200 Baud
 
     Print    ${SAMPLE TEXT SHORT}    interface=RS232
     Wait Until Print Complete
-    Printout Should Match ${ARIAL16 SAMPLE SHORT}
+    Printout Should Match "${ARIAL16 SAMPLE SHORT}" Exactly
 
 Test RS232 At 2400 Baud
     [Documentation]    Verify that the given RS232 baud rate works correctly.
@@ -52,7 +51,7 @@ Test RS232 At 2400 Baud
 
     Print    ${SAMPLE TEXT SHORT}    interface=RS232
     Wait Until Print Complete
-    Printout Should Match ${ARIAL16 SAMPLE SHORT}
+    Printout Should Match "${ARIAL16 SAMPLE SHORT}" Exactly
 
 Test RS232 At 4800 Baud
     [Documentation]    Verify that the given RS232 baud rate works correctly.
@@ -62,7 +61,7 @@ Test RS232 At 4800 Baud
 
     Print    ${SAMPLE TEXT SHORT}    interface=RS232
     Wait Until Print Complete
-    Printout Should Match ${ARIAL16 SAMPLE SHORT}
+    Printout Should Match "${ARIAL16 SAMPLE SHORT}" Exactly
 
 Test RS232 At 9600 Baud
     [Documentation]    Verify that the given RS232 baud rate works correctly.
@@ -72,7 +71,7 @@ Test RS232 At 9600 Baud
 
     Print    ${SAMPLE TEXT SHORT}    interface=RS232
     Wait Until Print Complete
-    Printout Should Match ${ARIAL16 SAMPLE SHORT}
+    Printout Should Match "${ARIAL16 SAMPLE SHORT}" Exactly
 
 Test RS232 At 19200 Baud
     [Documentation]    Verify that the given RS232 baud rate works correctly.
@@ -82,7 +81,7 @@ Test RS232 At 19200 Baud
 
     Print    ${SAMPLE TEXT SHORT}    interface=RS232
     Wait Until Print Complete
-    Printout Should Match ${ARIAL16 SAMPLE SHORT}
+    Printout Should Match "${ARIAL16 SAMPLE SHORT}" Exactly
 
 Test RS232 At 38400 Baud
     [Documentation]    Verify that the given RS232 baud rate works correctly.
@@ -92,7 +91,7 @@ Test RS232 At 38400 Baud
 
     Print    ${SAMPLE TEXT SHORT}    interface=RS232
     Wait Until Print Complete
-    Printout Should Match ${ARIAL16 SAMPLE SHORT}
+    Printout Should Match "${ARIAL16 SAMPLE SHORT}" Exactly
 
 Test RS232 At 57600 Baud
     [Documentation]    Verify that the given RS232 baud rate works correctly.
@@ -102,7 +101,7 @@ Test RS232 At 57600 Baud
 
     Print    ${SAMPLE TEXT SHORT}    interface=RS232
     Wait Until Print Complete
-    Printout Should Match ${ARIAL16 SAMPLE SHORT}
+    Printout Should Match "${ARIAL16 SAMPLE SHORT}" Exactly
 
 Test RS232 At 115200 Baud
     [Documentation]    Verify that the given RS232 baud rate works correctly.
@@ -112,4 +111,4 @@ Test RS232 At 115200 Baud
 
     Print    ${SAMPLE TEXT SHORT}    interface=RS232
     Wait Until Print Complete
-    Printout Should Match ${ARIAL16 SAMPLE SHORT}
+    Printout Should Match "${ARIAL16 SAMPLE SHORT}" Exactly

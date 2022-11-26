@@ -13,6 +13,7 @@
         "${workspaceFolder}/martel_printer_test_lib",
     ],
     "robot.variables": {
-        "OUTPUT DIR": "${workspaceFolder}/output"
+        "OUTPUT DIR": "${workspaceFolder}/output",
+        "SAMPLE DIR": "${workspaceFolder}/samples"
     }
 }

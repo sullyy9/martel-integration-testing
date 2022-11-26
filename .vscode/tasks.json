@@ -17,6 +17,8 @@
                 "run", "robot",
                 "--outputdir", "${workspaceFolder}/output",
                 "--pythonpath", "${workspaceFolder}/martel_printer_test_lib",
+                "--variable", "SAMPLE_DIR:${workspaceFolder}/samples",
+                "--listener", "printout_matching.ComparisonListener",
                 "${workspaceFolder}/testsuite"
             ],
             "problemMatcher": []

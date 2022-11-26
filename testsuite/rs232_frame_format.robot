@@ -2,7 +2,7 @@
 Documentation       Tests for RS232 data bits and parity.
 
 Library             printer.Printer
-Library             printout.ComparisonLibrary
+Library             printout_matching
 Resource            configuration_options.resource
 Resource            utils.resource
 Resource            samples.resource
@@ -18,7 +18,6 @@ Suite Teardown      Run Keywords
 ...                     Close Printer "RS232" Interface
 ...                     Set Printer Option "&{RS232 FRAME FORMAT}" To "Default"
 ...                     Set Test System "RS232" Frame Format To "8 Bits None"
-Test Teardown       Save Comparison If Test Failed
 
 Force Tags          rs232    frame_format
 
@@ -32,7 +31,7 @@ Test RS232 With 8 Bits No Parity
 
     Print    ${SAMPLE TEXT SHORT}    interface=RS232
     Wait Until Print Complete
-    Printout Should Match ${ARIAL16 SAMPLE SHORT}
+    Printout Should Match "${ARIAL16 SAMPLE SHORT}" Exactly
 
 Test RS232 With 8 Bits Even Parity
     [Documentation]    Verify that the given RS232 frame format works correctly.
@@ -42,7 +41,7 @@ Test RS232 With 8 Bits Even Parity
 
     Print    ${SAMPLE TEXT SHORT}    interface=RS232
     Wait Until Print Complete
-    Printout Should Match ${ARIAL16 SAMPLE SHORT}
+    Printout Should Match "${ARIAL16 SAMPLE SHORT}" Exactly
 
 Test RS232 With 8 Bits Odd Parity
     [Documentation]    Verify that the given RS232 frame format works correctly.
@@ -52,7 +51,7 @@ Test RS232 With 8 Bits Odd Parity
 
     Print    ${SAMPLE TEXT SHORT}    interface=RS232
     Wait Until Print Complete
-    Printout Should Match ${ARIAL16 SAMPLE SHORT}
+    Printout Should Match "${ARIAL16 SAMPLE SHORT}" Exactly
 
 Test RS232 With 7 Bits Even Parity
     [Documentation]    Verify that the given RS232 frame format works correctly.
@@ -62,7 +61,7 @@ Test RS232 With 7 Bits Even Parity
 
     Print    ${SAMPLE TEXT SHORT}    interface=RS232
     Wait Until Print Complete
-    Printout Should Match ${ARIAL16 SAMPLE SHORT}
+    Printout Should Match "${ARIAL16 SAMPLE SHORT}" Exactly
 
 Test RS232 With 7 Bits Odd Parity
     [Documentation]    Verify that the given RS232 frame format works correctly.
@@ -72,4 +71,4 @@ Test RS232 With 7 Bits Odd Parity
 
     Print    ${SAMPLE TEXT SHORT}    interface=RS232
     Wait Until Print Complete
-    Printout Should Match ${ARIAL16 SAMPLE SHORT}
+    Printout Should Match "${ARIAL16 SAMPLE SHORT}" Exactly

@@ -3,23 +3,14 @@ Documentation       Verify that the default font settings contain the correct
 ...                 fonts.
 
 Library             printer.Printer
-Library             printout.ComparisonLibrary
+Library             printout_matching
 
 
 *** Keywords ***
-Printout Should Match ${SAMPLE}
+Printout Should Match "${sample_path}" Exactly
     [Documentation]
     ...    Verify that the last printed printout matches a given sample.
 
-    Load Sample "${SAMPLE}"
-    ${PRINTOUT} =    Last Printout
-    Sample Should Match "${PRINTOUT}"
-
-Save Comparison If Test Failed
-    [Documentation]
-    ...    If the last test failed, generate an image comparing the
-    ...    sample and printout and save it.
-
-    ${Printout} =    Last Printout
-    Run Keyword If Test Failed
-    ...    Save Comparison    ${Printout}    ${TEST NAME}.png
+    ${sample} =    Load Printout    ${sample_path}
+    ${printout} =    Last Printout
+    Printouts Should Match Exactly    ${sample}    ${printout}

@@ -3,7 +3,7 @@ Documentation       Verify that the default font settings contain the correct
 ...                 fonts.
 
 Library             printer.Printer
-Library             printout.ComparisonLibrary
+Library             printout_matching
 Resource            configuration_options.resource
 Resource            utils.resource
 Resource            samples.resource
@@ -12,7 +12,6 @@ Suite Setup         Open Printer "USB" Interface
 Suite Teardown      Run Keywords
 ...                     Close Printer "USB" Interface
 ...                     Set Printer Option "&{Default Font}" To "Default"
-Test Teardown       Save Comparison If Test Failed
 
 Force Tags          config_options    default_fonts
 
@@ -27,7 +26,7 @@ Default Font 1 Should Be Arial16
     Set Printer Option "&{DEFAULT FONT}" To "Slot 1"
     Print    ${SAMPLE TEXT}
     Wait Until Print Complete
-    Printout Should Match ${ARIAL16 SAMPLE}
+    Printout Should Match "${ARIAL16 SAMPLE}" Exactly
 
 Default Font 2 Should Be Arial12
     [Documentation]
@@ -38,7 +37,7 @@ Default Font 2 Should Be Arial12
     Set Printer Option "&{DEFAULT FONT}" To "Slot 2"
     Print    ${SAMPLE TEXT}
     Wait Until Print Complete
-    Printout Should Match ${ARIAL12 SAMPLE}
+    Printout Should Match "${ARIAL12 SAMPLE}" Exactly
 
 Default Font 3 Should Be Arial9
     [Documentation]
@@ -49,7 +48,7 @@ Default Font 3 Should Be Arial9
     Set Printer Option "&{DEFAULT FONT}" To "Slot 3"
     Print    ${SAMPLE TEXT}
     Wait Until Print Complete
-    Printout Should Match ${ARIAL9 SAMPLE}
+    Printout Should Match "${ARIAL9 SAMPLE}" Exactly
 
 Default Font 4 Should Be Arial8
     [Documentation]
@@ -60,7 +59,7 @@ Default Font 4 Should Be Arial8
     Set Printer Option "&{DEFAULT FONT}" To "Slot 4"
     Print    ${SAMPLE TEXT}
     Wait Until Print Complete
-    Printout Should Match ${ARIAL8 SAMPLE}
+    Printout Should Match "${ARIAL8 SAMPLE}" Exactly
 
 Default Font 5 Should Be Unicode16
     [Documentation]
@@ -71,7 +70,7 @@ Default Font 5 Should Be Unicode16
     Set Printer Option "&{DEFAULT FONT}" To "Slot 5"
     Print    ${SAMPLE TEXT}
     Wait Until Print Complete
-    Printout Should Match ${UNICODE16 SAMPLE}
+    Printout Should Match "${UNICODE16 SAMPLE}" Exactly
 
 Default Font 6 Should Be Unicode12
     [Documentation]
@@ -82,7 +81,7 @@ Default Font 6 Should Be Unicode12
     Set Printer Option "&{DEFAULT FONT}" To "Slot 6"
     Print    ${SAMPLE TEXT}
     Wait Until Print Complete
-    Printout Should Match ${UNICODE12 SAMPLE}
+    Printout Should Match "${UNICODE12 SAMPLE}" Exactly
 
 Default Font 7 Should Be Unicode8
     [Documentation]
@@ -93,4 +92,4 @@ Default Font 7 Should Be Unicode8
     Set Printer Option "&{DEFAULT FONT}" To "Slot 7"
     Print    ${SAMPLE TEXT}
     Wait Until Print Complete
-    Printout Should Match ${UNICODE8 SAMPLE}
+    Printout Should Match "${UNICODE8 SAMPLE}" Exactly
