@@ -129,7 +129,7 @@ class Printer:
         if port_name:
             if port_name not in port_names:
                 raise FatalError(
-                    'Unable to find a printer on port {port_name}.'
+                    f'Unable to find a printer on port {port_name}.'
                 )
 
             self.usb = USBInterface(port_name)
@@ -380,8 +380,8 @@ class Printer:
                 self._rs232.set_parity(parity)
             case _:
                 raise Error(
-                    f'{interface} is not a valid communications interface to' +
-                    f'configure the frame format. {os.linesep}'
+                    f'{interface} is not a valid communications interface to ' +
+                    f'configure the frame format.'
                 )
 
     @keyword('Print')
@@ -444,6 +444,10 @@ class Printer:
         match interface:
             case CommsInterface.USB if self.usb:
                 self.usb.send(command)
+                self.usb.flush()
+            case CommsInterface.RS232 if self._rs232:
+                self._rs232.send(command)
+                self._rs232.flush()
             case _:
                 raise Error(
                     f'Cannot send command over {interface}.' +
