@@ -111,8 +111,39 @@ def should_match_exactly(sample: Printout, printout: Printout) -> None:
     if match_percent != 100:
         diff_percent = 100 - match_percent
         raise Failure(
-            f'The printout does not exactly match the sample. ' +
+            f'Expected the printout to exactly match the sample. ' +
+            f'Howver the printout does not exactly match the sample. ' +
             f'{diff_percent}% of the total dots do not match.'
+        )
+
+
+@keyword('Printouts Should Not Match')
+def should_not_match_exactly(sample: Printout, printout: Printout) -> None:
+    """
+    Verify that the content of the two printouts do not match. Each dot will
+    be compared between them and at least one must not be the same. However any
+    whitespace around the outside of the printout will not be taken into
+    account.
+
+    Parameters
+    ----------
+    sample : Printout
+        Sample printout to compare against.
+
+    printout : Printout
+        Printout to compare against the sample.
+
+    Raises
+    ------
+    Failure
+        If all of the dots match between the two printouts.
+
+    """
+    match_percent = sample.compare_with(printout) * 100
+    if match_percent == 100:
+        raise Failure(
+            f'Expected the printout to not match the sample. ' +
+            f'However the printout exactly matches the sample.'
         )
 
 
