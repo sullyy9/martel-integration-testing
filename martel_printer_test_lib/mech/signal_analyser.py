@@ -1,14 +1,16 @@
+import os
+import weakref
+import threading
 from pathlib import Path
 from typing import Final, Optional, Self
-import os
 from datetime import timedelta
-import weakref
 from weakref import finalize
 from enum import Enum
 
 from saleae import automation
 from saleae.automation import Capture, Manager, DeviceDesc
 from saleae.automation.errors import Logic2AlreadyRunningError
+
 
 class PinConfig(int, Enum):
     SPICL = 0
@@ -18,6 +20,7 @@ class PinConfig(int, Enum):
     MOTORA_L = 4
     MOTORB_L = 5
     STEPPER_EN = 6
+
 
 TRIGGER_CAPTURE_CONFIG = automation.CaptureConfiguration(
     capture_mode=automation.DigitalTriggerCaptureMode(
@@ -34,13 +37,13 @@ DEVICE_CONFIG = automation.LogicDeviceConfiguration(
     digital_sample_rate=40_000_000,
 )
 
+
 class AnlayserInitError(Exception):
     pass
 
 
 class AnalyserExportError(Exception):
     pass
-
 
 class SaleaeLogic8:
     __slots__ = ('__weakref__', '_manager', '_device', '_capture',
@@ -114,10 +117,31 @@ class SaleaeLogic8:
         if self._capture:
             self._capture = self._capture.close()
 
-    def wait_until_capture_complete(self) -> None:
+    def wait_until_capture_complete(self, timeout: float) -> None:
+        """
+        Wait until the currently running capture is complete.
+
+        Parameters
+        ----------
+            Maximum time in seconds to wait for the capture to complete.
+
+        Raises
+        ------
+        TimeoutError
+            If the capture fails to complete within the given timeframe.
+
+        """
         if self._capture:
+            timer = threading.Timer(timeout, self._capture.stop)
+            timer.start()
             self._capture.wait()
-            self._capture_running = False
+
+            if timer.is_alive():
+                timer.cancel()
+            else:
+                raise TimeoutError(
+                    'Capture failed to complete within the given timeframe.'
+                )
 
     def export_capture(self, path: Path) -> None:
         if self._capture is None:

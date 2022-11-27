@@ -14,12 +14,14 @@ from printout import Printout
 from .signal_analyser import SaleaeLogic8
 from .printout_generation import PrintMechState, PaperBuffer
 
+
 class MechPrintError(Exception):
     pass
 
 
 class MechFileError(Exception):
     pass
+
 
 class PrintMechAnalyzer(Protocol):
     def set_capture_output_directory(self, directory: Optional[Path]):
@@ -37,11 +39,12 @@ class PrintMechAnalyzer(Protocol):
     def stop_capture(self) -> None:
         ...
 
-    def wait_until_print_complete(self) -> None:
+    def wait_until_print_complete(self, timeout: float = 5) -> None:
         ...
 
     def get_last_printout(self) -> Printout:
         ...
+
 
 class LTPD245Emulator(PrintMechAnalyzer):
     """
@@ -155,18 +158,34 @@ class LTPD245Emulator(PrintMechAnalyzer):
         """
         self._capture_name = name
         self._analyser.start_print_capture()
-        time.sleep(0.1) # Give the analyzer a little bit of time to start up.
+        time.sleep(0.1)  # Give the analyzer a little bit of time to start up.
 
     def stop_capture(self) -> None:
         pass
 
-    def wait_until_print_complete(self) -> None:
+    def wait_until_print_complete(self, timeout: float = 5) -> None:
         """
         Wait until a print has finished. Export the captured data to the output
         directory if one has been specified, otherwise store it in a temporary
         directory.
+
+        Parameters
+        ----------
+        timeout : float
+            Maximum time in seconds to wait for the print to complete.
+
+        Raises
+        ------
+        TimeoutError
+            If the print fails to complete within the given timeframe.
+
         """
-        self._analyser.wait_until_capture_complete()
+        try:
+            self._analyser.wait_until_capture_complete(timeout)
+        except TimeoutError as exc:
+            raise TimeoutError(
+                'Print failed to complete within the given timeframe.'
+            )
 
         timestamp = time.strftime('%Y%m%d-%H%M%S')
         filename = self._capture_name if self._capture_name else timestamp
@@ -200,10 +219,10 @@ class LTPD245Emulator(PrintMechAnalyzer):
     def _generate_image_from_capture(self, capture: Path) -> Printout:
         states = printout_generation.read_mech_input(capture)
         print_mech = PrintMechState(next(states))
-        
+
         for state in states:
             print_mech.update(state)
-        
+
         return print_mech.get_printout()
 
 

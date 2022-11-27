@@ -5,7 +5,7 @@ from typing import Optional
 
 from serial.tools.list_ports_common import ListPortInfo
 
-from robot.api import Error, FatalError
+from robot.api import Error, FatalError, ContinuableFailure
 from robot.api.deco import keyword, library
 from robot.libraries import Dialogs
 from robot.libraries.BuiltIn import BuiltIn, RobotNotRunningError
@@ -248,9 +248,29 @@ class Printer:
             self.mech.set_printout_output_directory(self._printouts_path)
 
     @keyword('Wait Until Print Complete')
-    def wait_until_print_complete(self) -> None:
+    def wait_until_print_complete(self, timeout: float = 5) -> None:
+        """
+        Wait until a print has finished.
+
+        Parameters
+        ----------
+        timeout : float
+            Maximum time in seconds to wait for the print to complete.
+
+        Raises
+        ------
+        ContinuableFailure
+            If the print fails to complete within the given timeframe.
+
+        """
         if self.mech:
-            self.mech.wait_until_print_complete()
+            try:
+                self.mech.wait_until_print_complete(timeout)
+            except TimeoutError:
+                raise ContinuableFailure(
+                    'Print failed to complete within the expected timeframe'
+                )
+
         else:
             raise Error(
                 'Attempted to access print mechanism but none has been selected.'
