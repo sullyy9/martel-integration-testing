@@ -2,7 +2,6 @@
 Documentation       Tests for RS232 baud rate.
 
 Library             printer.Printer
-Library             printout_matching
 Resource            configuration_options.resource
 Resource            utils.resource
 Resource            samples.resource
@@ -109,6 +108,24 @@ Test RS232 At 115200 Baud
     Set Printer Option "&{RS232 BAUD RATE}" To "115200"
     Set Test System "RS232" Baud Rate To "115200"
 
+    Print    ${SAMPLE TEXT SHORT}    interface=RS232
+    Wait Until Print Complete
+    Printout Should Match "${ARIAL16 SAMPLE SHORT}" Exactly
+
+Test RS232 Baud Rate Error Recovery
+    [Documentation]
+    ...    Verify that the RS232 interface can recover after recieving a
+    ...    transmission that uses the incorrect baud rate.
+
+    Set Printer Option "&{RS232 BAUD RATE}" To "9600"
+    Set Test System "RS232" Baud Rate To "4800"
+
+    Print    ${SAMPLE TEXT SHORT}    interface=RS232
+    Wait Until Print Complete
+    Printout Should Not Match "${ARIAL16 SAMPLE SHORT}"
+    Clear Printer Print Buffer
+
+    Set Test System "RS232" Baud Rate To "9600"
     Print    ${SAMPLE TEXT SHORT}    interface=RS232
     Wait Until Print Complete
     Printout Should Match "${ARIAL16 SAMPLE SHORT}" Exactly
