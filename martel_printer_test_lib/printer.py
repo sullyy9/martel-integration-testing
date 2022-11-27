@@ -22,11 +22,14 @@ PRINTER_PID = [0x1, 0x5740]
 
 NULL = 0
 ESC = 0x1B
+CAN = 0x18
+
 ENABLE_DEBUG = bytearray([ESC, NULL, NULL, ord('D'), NULL])
 DEBUG_PRINT_SELFTEST = bytearray([ESC, NULL, NULL, ord('S'), 8])
 DEBUG_SET_OPTION = bytearray([ESC, NULL, NULL, ord('O')])
 
 COMMAND_RESET = bytearray([ESC, NULL, ord('@')])
+COMMAND_CLEAR_PRINT_BUFFER = bytearray([CAN])
 
 
 @unique
@@ -512,6 +515,10 @@ class Printer:
 
         """
         self.send_command(DEBUG_SET_OPTION + bytes([option, setting]))
+
+    @keyword('Clear Printer Print Buffer')
+    def clear_print_buffer(self) -> None:
+        self.send_command(COMMAND_CLEAR_PRINT_BUFFER)
 
     def _get_test_name_or_none(self) -> str | None:
         """

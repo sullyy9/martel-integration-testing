@@ -10,3 +10,4 @@ Suite Setup         Run Keywords
 ...                     Select Printer USB Port
 ...                     Select Printer RS232 Port
 Suite Teardown      Shutdown Printer
+Test Setup          Clear Printer Print Buffer
