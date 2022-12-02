@@ -9,5 +9,6 @@ Suite Setup         Run Keywords
 ...                     Select Printer Mechanism Analyzer
 ...                     Select Printer USB Interface
 ...                     Select Printer RS232 Interface
+...                     Select Printer Ir Interface
 Suite Teardown      Shutdown Printer
 Test Setup          Clear Printer Print Buffer
