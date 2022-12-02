@@ -1,7 +1,7 @@
 import os
 from enum import StrEnum, unique
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Self
 
 from serial.tools.list_ports_common import ListPortInfo
 
@@ -41,9 +41,31 @@ class CommsInterface(StrEnum):
 
 
 @unique
-class RS232HardwareInterface(StrEnum):
-    USB_RS232_ADAPTER = 'USB To RS232 Adapter'
+class HardwareInterface(StrEnum):
+    USB_ADAPTER = 'USB Adapter'
     TCU = 'TCU'
+
+    @classmethod
+    def from_user(cls) -> Self:
+        selection = Dialogs.get_selection_from_user(
+            'Select the printers RS232 hardware interface:',
+            *[interface for interface in HardwareInterface]
+        )
+        return HardwareInterface(selection)
+
+    def get_valid_ports(self) -> list[ListPortInfo]:
+        match self:
+            case HardwareInterface.USB_ADAPTER:
+                return RS232AdapterInterface.get_valid_ports()
+            case HardwareInterface.TCU:
+                return RS232TCUInterface.get_valid_ports()
+
+    def get_interface(self, port_name: str) -> SerialCommsInterface:
+        match self:
+            case HardwareInterface.USB_ADAPTER:
+                return RS232AdapterInterface(port_name)
+            case HardwareInterface.TCU:
+                return RS232TCUInterface(port_name)
 
 
 @unique
@@ -61,6 +83,16 @@ class FrameFormat(StrEnum):
     ODD_7BITS = '7 Bits Odd'
 
 
+def get_serial_port_from_user(port_list: list[ListPortInfo]) -> str:
+    selected_port = Dialogs.get_selection_from_user(
+        'Select the printers RS232 port',
+        *port_list
+    )
+
+    # Search through the ports to find the name of the one that was selected.
+    return next(p.name for p in port_list if str(p) == selected_port)
+
+
 @library(scope='GLOBAL')
 class Printer:
 
@@ -69,8 +101,8 @@ class Printer:
         self._captures_path: Optional[Path] = None
         self._printouts_path: Optional[Path] = None
 
-        self.mech: Optional[PrintMechAnalyzer] = None
-        self.usb: Optional[BaseCommsInterface] = None
+        self._mech: Optional[PrintMechAnalyzer] = None
+        self._usb: Optional[BaseCommsInterface] = None
         self._rs232: Optional[SerialCommsInterface] = None
 
     def __del__(self) -> None:
@@ -80,8 +112,8 @@ class Printer:
     def shutdown(self) -> None:
         pass
 
-    @keyword('Select Printer Mechanism')
-    def select_printer_mechanism(
+    @keyword('Select Printer Mechanism Analyzer')
+    def select_printer_mechanism_analyzer(
         self,
         mech: Optional[PrintMechAnalyzer] = None
     ) -> None:
@@ -97,20 +129,22 @@ class Printer:
         """
         match mech:
             case PrintMechanism.EYEBALLMK1:
-                self.mech = EyeballMk1()
-            case PrintMechanism.LTPD245EMULATOR | None:
-                self.mech = LTPD245Emulator()
+                self._mech = EyeballMk1()
+            case PrintMechanism.LTPD245EMULATOR:
+                self._mech = LTPD245Emulator()
+            case _:
+                self._mech = LTPD245Emulator()
 
-        if self.mech:
-            self.mech.set_capture_output_directory(self._captures_path)
-            self.mech.set_printout_output_directory(self._printouts_path)
+        self._mech.set_capture_output_directory(self._captures_path)
+        self._mech.set_printout_output_directory(self._printouts_path)
 
-    @keyword('Select Printer USB Port')
-    def select_usb_port(self, port_name: Optional[str] = None) -> None:
+    @keyword('Select Printer USB Interface')
+    def select_usb_port(self,
+                        interface: Optional[USBInterface] = None
+                        ) -> None:
         """
-        Select the port to use for the USB interface. If none is specified,
-        open a dialog and ask the user to select one. The dialog will only
-        contain devices which have a VID and PID matching that of a printer.
+        Select a USB interface. If none is specified, open a Robot Framework
+        dialog asking the user to select one.
 
         Parameters
         ----------
@@ -123,96 +157,48 @@ class Printer:
             If devices are found with the correct VID or PID.
 
         """
-        ports = USBInterface.get_valid_ports()
-        if len(ports) < 1:
-            raise FatalError('Unable to find any printer USB connection.')
+        if not interface:
+            valid_ports = USBInterface.get_valid_ports()
 
-        port_names = [port.name for port in ports]
+            if len(valid_ports) < 1:
+                raise FatalError('Unable to find any printer USB connection.')
 
-        if port_name:
-            if port_name not in port_names:
-                raise FatalError(
-                    f'Unable to find a printer on port {port_name}.'
-                )
+            interface = USBInterface(get_serial_port_from_user(valid_ports))
 
-            self.usb = USBInterface(port_name)
+        self._usb = interface
 
-        else:
-            selected_port = Dialogs.get_selection_from_user(
-                'Select the printers USB port',
-                *ports
-            )
-
-            # Search through the ports to find the name of the one that was
-            # selected.
-            self.usb = USBInterface(
-                next(p.name for p in ports if str(p) == selected_port)
-            )
-
-    @keyword('Select Printer RS232 Port')
-    def select_rs232_port(self,
-                          method: Optional[RS232HardwareInterface] = None,
-                          port_name: Optional[str] = None) -> None:
+    @keyword('Select Printer RS232 Interface')
+    def select_rs232_interface(self,
+                               interface: Optional[SerialCommsInterface] = None,
+                               ) -> None:
         """
-        Select the port to use for the rs232 interface. If none is specified,
-        open a dialog and ask the user to select one.
+        Select a RS232 interface. If none is specified, open a Robot Framework
+        dialog asking the user to select one.
 
         Parameters
         ----------
-        port_name : Optional[str]
-            Name of the port. e.g. 'COM6'
+        interface : Optional[SerialCommsInterface]
+            Interface to use for RS232 communications.
 
         Raises
         ------
         FatalError
-            If no ports are found with the given name.
+            If any error occurs.
 
         """
-        if not method:
-            method = Dialogs.get_selection_from_user(
-                'Select the printers RS232 hardware interface:',
-                RS232HardwareInterface.USB_RS232_ADAPTER,
-                RS232HardwareInterface.TCU
-            )
+        if not interface:
+            hardware_interface = HardwareInterface.from_user()
+            valid_ports = hardware_interface.get_valid_ports()
 
-        valid_ports: list[ListPortInfo]
-        match method:
-            case RS232HardwareInterface.USB_RS232_ADAPTER:
-                valid_ports = RS232AdapterInterface.get_valid_ports()
-            case RS232HardwareInterface.TCU:
-                valid_ports = RS232TCUInterface.get_valid_ports()
-            case _:
+            if len(valid_ports) < 1:
                 raise FatalError(
-                    'An invalid RS232 hardware interface has been selected.'
+                    f'Unable to find a valid port for {hardware_interface}.'
                 )
 
-        if len(valid_ports) < 1:
-            raise FatalError('Unable to find any printer RS232 connection.')
+            port_name = get_serial_port_from_user(valid_ports)
+            interface = hardware_interface.get_interface(port_name)
 
-        valid_port_names = [port.name for port in valid_ports]
-
-        # If no port has been specified, ask the user for one.
-        if port_name is None:
-            selected_port = Dialogs.get_selection_from_user(
-                'Select the printers RS232 port',
-                *valid_ports
-            )
-
-            # Search through the ports to find the name of the one that was
-            # selected.
-            port_name = next(p.name for p in valid_ports
-                             if str(p) == selected_port)
-
-        # If a port has been specified, make sure it's valid.
-        elif port_name not in valid_port_names:
-            raise FatalError('{port_name} is not a valid port.')
-
-        if port_name:
-            match method:
-                case RS232HardwareInterface.USB_RS232_ADAPTER:
-                    self._rs232 = RS232AdapterInterface(port_name)
-                case RS232HardwareInterface.TCU:
-                    self._rs232 = RS232TCUInterface(port_name)
+        self._rs232 = interface
 
     @keyword('Create Printer Library Output Directories')
     def create_output_directories(
@@ -246,9 +232,9 @@ class Printer:
             self._printouts_path = Path(self._output_path, 'printouts')
             self._printouts_path.mkdir(exist_ok=True)
 
-        if self.mech:
-            self.mech.set_capture_output_directory(self._captures_path)
-            self.mech.set_printout_output_directory(self._printouts_path)
+        if self._mech:
+            self._mech.set_capture_output_directory(self._captures_path)
+            self._mech.set_printout_output_directory(self._printouts_path)
 
     @keyword('Wait Until Print Complete')
     def wait_until_print_complete(self, timeout: float = 5) -> None:
@@ -266,29 +252,30 @@ class Printer:
             If the print fails to complete within the given timeframe.
 
         """
-        if self.mech:
+        if self._mech:
             try:
-                self.mech.wait_until_print_complete(timeout)
+                self._mech.wait_until_print_complete(timeout)
             except TimeoutError:
                 raise ContinuableFailure(
                     'Print failed to complete within the expected timeframe'
                 )
-
         else:
             raise Error(
-                'Attempted to access print mechanism but none has been selected.'
+                'Attempted to access print mechanism analyzer but none has ' +
+                'been selected.'
             )
 
     @keyword('Last Printout')
     def get_last_printout(self) -> Printout:
-        if self.mech:
-            return self.mech.get_last_printout()
+        if self._mech:
+            return self._mech.get_last_printout()
         else:
             raise Error(
-                'Attempted to access print mechanism but none has been selected.'
+                'Attempted to access print mechanism but none has ' +
+                'been selected.'
             )
 
-    @keyword(name='Open Printer "${interface}" Interface')
+    @keyword('Open Printer "${interface}" Interface')
     def open_comms_interface(self, interface: CommsInterface) -> None:
         """
         Open a communication interface to the printer.
@@ -306,8 +293,8 @@ class Printer:
 
         """
         match interface:
-            case CommsInterface.USB if self.usb is not None:
-                self.usb.open()
+            case CommsInterface.USB if self._usb is not None:
+                self._usb.open()
             case CommsInterface.RS232 if self._rs232 is not None:
                 self._rs232.open()
             case _:
@@ -316,7 +303,7 @@ class Printer:
                     'The interface has not been initialised.'
                 )
 
-    @keyword(name='Close Printer "${interface}" Interface')
+    @keyword('Close Printer "${interface}" Interface')
     def close_comms_interface(self, interface: CommsInterface) -> None:
         """
         Close a communication interface to the printer.
@@ -334,8 +321,8 @@ class Printer:
 
         """
         match interface:
-            case CommsInterface.USB if self.usb is not None:
-                self.usb.close()
+            case CommsInterface.USB if self._usb is not None:
+                self._usb.close()
             case CommsInterface.RS232 if self._rs232 is not None:
                 self._rs232.close()
             case _:
@@ -437,8 +424,8 @@ class Printer:
         if name is None:
             name = self._get_test_name_or_none()
 
-        if self.mech:
-            self.mech.start_capture(name)
+        if self._mech:
+            self._mech.start_capture(name)
 
         else:
             raise Error(
@@ -446,9 +433,9 @@ class Printer:
             )
 
         match interface:
-            case CommsInterface.USB if self.usb:
-                self.usb.send(text.encode(encoding='charmap'))
-                self.usb.flush()
+            case CommsInterface.USB if self._usb:
+                self._usb.send(text.encode(encoding='charmap'))
+                self._usb.flush()
             case CommsInterface.RS232 if self._rs232:
                 self._rs232.send(text.encode(encoding='charmap'))
                 self._rs232.flush()
@@ -460,14 +447,14 @@ class Printer:
 
     @keyword('Send Printer Command')
     def send_command(self,
-                     command: bytearray,
+                     command: bytes,
                      interface: CommsInterface = CommsInterface.USB
                      ) -> None:
 
         match interface:
-            case CommsInterface.USB if self.usb:
-                self.usb.send(command)
-                self.usb.flush()
+            case CommsInterface.USB if self._usb:
+                self._usb.send(command)
+                self._usb.flush()
             case CommsInterface.RS232 if self._rs232:
                 self._rs232.send(command)
                 self._rs232.flush()
@@ -481,25 +468,25 @@ class Printer:
     Convinience functions for sending specific commands.
 
     """
-    @keyword(name='Reset Printer')
+    @keyword('Reset Printer')
     def reset(self) -> None:
         self.send_command(COMMAND_RESET)
 
-    @keyword(name='Enable Printer Debug Mode')
+    @keyword('Enable Printer Debug Mode')
     def enable_debug(self) -> None:
         self.send_command(ENABLE_DEBUG)
 
     @keyword('Print Selftest')
     def print_selftest(self) -> None:
-        if self.mech:
-            self.mech.start_capture(name=self._get_test_name_or_none())
+        if self._mech:
+            self._mech.start_capture(name=self._get_test_name_or_none())
             self.send_command(DEBUG_PRINT_SELFTEST)
         else:
             raise Error(
                 'Attempted to use print mechanism but none has been selected.'
             )
 
-    @keyword(name='Set Printer Option')
+    @keyword('Set Printer Option')
     def set_option(self, option: int, setting: int) -> None:
         """
         Set a configuration option. The option will have no effect until the
