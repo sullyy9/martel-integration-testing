@@ -1,4 +1,3 @@
-import os
 import weakref
 from weakref import finalize
 from typing import Final
@@ -83,8 +82,6 @@ class RS232TCUInterface(TCU, SerialCommsInterface):
         open the conection.
 
         """
-        if not self._port.isOpen():
-            self._port.open()
 
         self.set_channel(RelayChannel.COMMS_MODE, CommsMode.RS232)
 
@@ -93,24 +90,21 @@ class RS232TCUInterface(TCU, SerialCommsInterface):
         Close the conection.
 
         """
-        if self._port.isOpen():
-            self._port.close()
+        pass
 
     def send(self, data: bytes) -> None:
         """
         Write a number of bytes to the output buffer.
 
         """
-        if self._port.isOpen():
-            self.print(data)
+        self.print(data)
 
     def flush(self) -> None:
         """
         Flush any data in the output buffer.
 
         """
-        if self._port.isOpen():
-            self._port.flush()
+        pass
 
     def set_baud_rate(self, baud_rate: int) -> None:
         self.set_channel(RelayChannel.BAUD_RATE, int(baud_rate / 100))

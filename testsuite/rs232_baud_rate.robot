@@ -13,10 +13,10 @@ Suite Setup         Run Keywords
 ...                     Set Printer Option "&{RS232 FRAME FORMAT}" To "Default"
 ...                     Set Test System "RS232" Frame Format To "8 Bits None"
 Suite Teardown      Run Keywords
-...                     Close Printer "USB" Interface
-...                     Close Printer "RS232" Interface
 ...                     Set Printer Option "&{RS232 BAUD RATE}" To "Default"
 ...                     Set Test System "RS232" Baud Rate To "9600"
+...                     Close Printer "RS232" Interface
+...                     Close Printer "USB" Interface
 
 Force Tags          rs232    baud_rate
 

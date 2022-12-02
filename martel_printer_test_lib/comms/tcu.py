@@ -40,6 +40,7 @@ class RelayChannel(IntEnum):
     COMMS_MODE = 0x40
     BAUD_RATE = 0x41
 
+
 @unique
 class CommsMode(IntEnum):
     """
@@ -108,9 +109,19 @@ class TCU:
             )
 
         self._port = Serial(port_name, timeout=2)
+        self._close_port()
+
         self.cleanup = weakref.finalize(self, self._cleanup)
 
     def _cleanup(self) -> None:
+        if self._port.isOpen():
+            self._port.close()
+
+    def _open_port(self) -> None:
+        if not self._port.isOpen():
+            self._port.open()
+
+    def _close_port(self) -> None:
         if self._port.isOpen():
             self._port.close()
 
@@ -146,11 +157,12 @@ class TCU:
             If the TCU fails to echo back the command.
 
         """
-
+        self._open_port()
         self._port.write(command)
         self._port.flush()
 
         response = self._port.read_until(b'\r')
+        self._close_port()
 
         if response != command:
             raise TCUProtocolError(
@@ -174,7 +186,9 @@ class TCU:
             If the USB interface has not been initialised.
 
         """
+        self._open_port()
         response = self._port.read_until(b'\r', size=256)
+        self._close_port()
 
         if len(response) == 0:
             raise TCUProtocolError(
