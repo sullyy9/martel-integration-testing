@@ -1,5 +1,5 @@
 import os
-from enum import StrEnum, unique
+from enum import StrEnum, auto, unique
 from pathlib import Path
 from typing import Optional, Self
 
@@ -14,7 +14,8 @@ import comms
 from mech import PrintMechAnalyzer, LTPD245Emulator, EyeballMk1
 from printout import Printout
 from comms import (BaseCommsInterface, SerialCommsInterface, USBInterface,
-                   RS232AdapterInterface, RS232TCUInterface)
+                   RS232AdapterInterface, RS232TCUInterface,
+                   IRAdapterInterface, IRTCUInterface)
 
 
 PRINTER_VID = 0x483
@@ -34,10 +35,10 @@ COMMAND_CLEAR_PRINT_BUFFER = bytearray([CAN])
 
 @unique
 class CommsInterface(StrEnum):
-    USB = 'USB'
-    RS232 = 'RS232'
-    INFRARED = 'IR'
-    BLUETOOTH = 'BT'
+    USB = auto()
+    RS232 = auto()
+    IR = auto()
+    BLUETOOTH = auto()
 
 
 @unique
@@ -46,9 +47,9 @@ class HardwareInterface(StrEnum):
     TCU = 'TCU'
 
     @classmethod
-    def from_user(cls) -> Self:
+    def from_user(cls, interface: str) -> Self:
         selection = Dialogs.get_selection_from_user(
-            'Select the printers RS232 hardware interface:',
+            f'Select the printers {interface} hardware interface:',
             *[interface for interface in HardwareInterface]
         )
         return HardwareInterface(selection)
@@ -60,12 +61,19 @@ class HardwareInterface(StrEnum):
             case HardwareInterface.TCU:
                 return RS232TCUInterface.get_valid_ports()
 
-    def get_interface(self, port_name: str) -> SerialCommsInterface:
+    def get_rs232_interface(self, port_name: str) -> SerialCommsInterface:
         match self:
             case HardwareInterface.USB_ADAPTER:
                 return RS232AdapterInterface(port_name)
             case HardwareInterface.TCU:
                 return RS232TCUInterface(port_name)
+
+    def get_infrared_interface(self, port_name: str) -> SerialCommsInterface:
+        match self:
+            case HardwareInterface.USB_ADAPTER:
+                return IRAdapterInterface(port_name)
+            case HardwareInterface.TCU:
+                return IRTCUInterface(port_name)
 
 
 @unique
@@ -104,6 +112,7 @@ class Printer:
         self._mech: Optional[PrintMechAnalyzer] = None
         self._usb: Optional[BaseCommsInterface] = None
         self._rs232: Optional[SerialCommsInterface] = None
+        self._ir: Optional[SerialCommsInterface] = None
 
     def __del__(self) -> None:
         self.shutdown()
@@ -115,7 +124,7 @@ class Printer:
     @keyword('Select Printer Mechanism Analyzer')
     def select_printer_mechanism_analyzer(
         self,
-        mech: Optional[PrintMechAnalyzer] = None
+        mech: Optional[PrintMechanism] = None
     ) -> None:
         """
         Select the analyzer to use for capturing the print mechanism output.
@@ -188,7 +197,7 @@ class Printer:
 
         """
         if not interface:
-            hardware_interface = HardwareInterface.from_user()
+            hardware_interface = HardwareInterface.from_user(interface='RS232')
             valid_ports = hardware_interface.get_valid_ports()
 
             if len(valid_ports) < 1:
@@ -197,9 +206,42 @@ class Printer:
                 )
 
             port = get_serial_port_from_user(hardware_interface, valid_ports)
-            interface = hardware_interface.get_interface(port)
+            interface = hardware_interface.get_rs232_interface(port)
 
         self._rs232 = interface
+
+    @keyword('Select Printer IR Interface')
+    def select_infrared_interface(self,
+                                  interface: Optional[SerialCommsInterface] = None,
+                                  ) -> None:
+        """
+        Select an IR interface. If none is specified, open a Robot Framework
+        dialog asking the user to select one.
+
+        Parameters
+        ----------
+        interface : Optional[SerialCommsInterface]
+            Interface to use for IR communications.
+
+        Raises
+        ------
+        FatalError
+            If any error occurs.
+
+        """
+        if not interface:
+            hardware_interface = HardwareInterface.from_user(interface='IR')
+            valid_ports = hardware_interface.get_valid_ports()
+
+            if len(valid_ports) < 1:
+                raise FatalError(
+                    f'Unable to find a valid port for {hardware_interface}.'
+                )
+
+            port = get_serial_port_from_user(hardware_interface, valid_ports)
+            interface = hardware_interface.get_infrared_interface(port)
+
+        self._ir = interface
 
     @keyword('Create Printer Library Output Directories')
     def create_output_directories(
@@ -298,6 +340,8 @@ class Printer:
                 self._usb.open()
             case CommsInterface.RS232 if self._rs232 is not None:
                 self._rs232.open()
+            case CommsInterface.IR if self._ir is not None:
+                self._ir.open()
             case _:
                 raise Error(
                     f'Cannot open {interface} interface.' +
@@ -326,6 +370,8 @@ class Printer:
                 self._usb.close()
             case CommsInterface.RS232 if self._rs232 is not None:
                 self._rs232.close()
+            case CommsInterface.IR if self._ir is not None:
+                self._ir.close()
             case _:
                 raise Error(
                     f'Cannot close {interface} interface.' +
@@ -337,6 +383,8 @@ class Printer:
         match interface:
             case CommsInterface.RS232 if self._rs232:
                 self._rs232.set_baud_rate(baud_rate)
+            case CommsInterface.IR if self._ir is not None:
+                self._ir.set_baud_rate(baud_rate)
             case _:
                 raise Error(
                     f'Cannot set {interface} baud rate as the interface ' +
@@ -389,6 +437,9 @@ class Printer:
             case CommsInterface.RS232 if self._rs232:
                 self._rs232.set_data_bits(bits)
                 self._rs232.set_parity(parity)
+            case CommsInterface.IR if self._ir is not None:
+                self._ir.set_data_bits(bits)
+                self._ir.set_parity(parity)
             case _:
                 raise Error(
                     f'{interface} is not a valid communications interface to ' +
@@ -440,6 +491,9 @@ class Printer:
             case CommsInterface.RS232 if self._rs232:
                 self._rs232.send(text.encode(encoding='charmap'))
                 self._rs232.flush()
+            case CommsInterface.IR if self._ir is not None:
+                self._ir.send(text.encode(encoding='charmap'))
+                self._ir.flush()
             case _:
                 raise Error(
                     f'Cannot print over {interface}. ' +
@@ -459,6 +513,9 @@ class Printer:
             case CommsInterface.RS232 if self._rs232:
                 self._rs232.send(command)
                 self._rs232.flush()
+            case CommsInterface.IR if self._ir is not None:
+                self._ir.send(command)
+                self._ir.flush()
             case _:
                 raise Error(
                     f'Cannot send command over {interface}.' +
