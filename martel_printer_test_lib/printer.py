@@ -83,9 +83,9 @@ class FrameFormat(StrEnum):
     ODD_7BITS = '7 Bits Odd'
 
 
-def get_serial_port_from_user(port_list: list[ListPortInfo]) -> str:
+def get_serial_port_from_user(interface: str, port_list: list[ListPortInfo]) -> str:
     selected_port = Dialogs.get_selection_from_user(
-        'Select the printers RS232 port',
+        f'Select the serial port for the {interface} interface',
         *port_list
     )
 
@@ -163,7 +163,8 @@ class Printer:
             if len(valid_ports) < 1:
                 raise FatalError('Unable to find any printer USB connection.')
 
-            interface = USBInterface(get_serial_port_from_user(valid_ports))
+            port = get_serial_port_from_user('USB', valid_ports)
+            interface = USBInterface(port)
 
         self._usb = interface
 
@@ -195,8 +196,8 @@ class Printer:
                     f'Unable to find a valid port for {hardware_interface}.'
                 )
 
-            port_name = get_serial_port_from_user(valid_ports)
-            interface = hardware_interface.get_interface(port_name)
+            port = get_serial_port_from_user(hardware_interface, valid_ports)
+            interface = hardware_interface.get_interface(port)
 
         self._rs232 = interface
 
