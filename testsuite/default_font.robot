@@ -10,8 +10,8 @@ Resource            samples.resource
 
 Suite Setup         Open Printer "USB" Interface
 Suite Teardown      Run Keywords
-...                     Close Printer "USB" Interface
 ...                     Set Printer Option "&{Default Font}" To "Default"
+...                     Close Printer "USB" Interface
 
 Force Tags          config_options    default_fonts
 
