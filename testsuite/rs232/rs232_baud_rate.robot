@@ -2,23 +2,19 @@
 Documentation       Tests for RS232 baud rate.
 
 Library             printer.Printer
-Resource            configuration_options.resource
-Resource            utils.resource
-Resource            samples.resource
+Resource            ../configuration_options.resource
+Resource            ../utils.resource
+Resource            ../samples.resource
 
 Suite Setup         Run Keywords
-...                     Open Printer "USB" Interface
-...                     Open Printer "RS232" Interface
 ...                     Set Printer Option "${Default Font}" To "Default"
 ...                     Set Printer Option "&{RS232 FRAME FORMAT}" To "Default"
 ...                     Set Test System "RS232" Frame Format To "8 Bits None"
 Suite Teardown      Run Keywords
 ...                     Set Printer Option "&{RS232 BAUD RATE}" To "Default"
 ...                     Set Test System "RS232" Baud Rate To "9600"
-...                     Close Printer "RS232" Interface
-...                     Close Printer "USB" Interface
 
-Force Tags          rs232    baud_rate
+Force Tags          baud_rate
 
 
 *** Test Cases ***

@@ -2,23 +2,19 @@
 Documentation       Tests for IR baud rate.
 
 Library             printer.Printer
-Resource            configuration_options.resource
-Resource            utils.resource
-Resource            samples.resource
+Resource            ../configuration_options.resource
+Resource            ../utils.resource
+Resource            ../samples.resource
 
 Suite Setup         Run Keywords
-...                     Open Printer "USB" Interface
-...                     Open Printer "IR" Interface
 ...                     Set Printer Option "${Default Font}" To "Default"
 ...                     Set Printer Option "&{IR FRAME FORMAT}" To "Default"
 ...                     Set Test System "IR" Frame Format To "8 Bits None"
 Suite Teardown      Run Keywords
 ...                     Set Printer Option "&{IR BAUD RATE}" To "Default"
 ...                     Set Test System "IR" Baud Rate To "9600"
-...                     Close Printer "IR" Interface
-...                     Close Printer "USB" Interface
 
-Force Tags          infrared    baud_rate
+Force Tags          baud_rate
 
 
 *** Test Cases ***

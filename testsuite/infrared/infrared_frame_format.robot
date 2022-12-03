@@ -2,9 +2,9 @@
 Documentation       Tests for IR data bits and parity.
 
 Library             printer.Printer
-Resource            configuration_options.resource
-Resource            utils.resource
-Resource            samples.resource
+Resource            ../configuration_options.resource
+Resource            ../utils.resource
+Resource            ../samples.resource
 
 Suite Setup         Run Keywords
 ...                     Open Printer "USB" Interface
@@ -18,7 +18,7 @@ Suite Teardown      Run Keywords
 ...                     Close Printer "IR" Interface
 ...                     Close Printer "USB" Interface
 
-Force Tags          infrared    frame_format
+Force Tags          frame_format
 
 
 *** Test Cases ***
