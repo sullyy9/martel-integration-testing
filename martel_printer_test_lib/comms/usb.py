@@ -1,6 +1,6 @@
 import weakref
 from weakref import finalize
-from typing import Final, Optional
+from typing import Final
 
 
 import serial
@@ -8,12 +8,14 @@ from serial import Serial
 import serial.tools.list_ports
 from serial.tools.list_ports_common import ListPortInfo
 
-from .interface import BaseCommsInterface
+from .interface import SerialCommsInterface
+
 
 class USBConnectError(Exception):
     pass
 
-class USBInterface(BaseCommsInterface):
+
+class USBInterface(SerialCommsInterface):
     """
     Interface for a printer's USB connection.
 
@@ -44,7 +46,7 @@ class USBInterface(BaseCommsInterface):
 
         """
         self._port: Final[Serial]
-        self.cleanup: Final[finalize] 
+        self.cleanup: Final[finalize]
 
         ports = serial.tools.list_ports.comports()
         valid_port_names = [port.name for port in ports]
@@ -55,7 +57,7 @@ class USBInterface(BaseCommsInterface):
                 'However a port with that name does not exist.'
             )
 
-        self._port = Serial(port_name, timeout = 1)
+        self._port = Serial(port_name, timeout=1)
         self.cleanup = weakref.finalize(self, self._cleanup)
 
     def _cleanup(self) -> None:
