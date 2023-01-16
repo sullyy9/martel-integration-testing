@@ -82,7 +82,7 @@ class MeasureChannel(IntEnum):
 
 
 def enable_debug_command(mode: DebugMode = DebugMode.AUTOTEST) -> bytes:
-    return bytes([CC.ESC, CC.NULL, CC.NULL, ord('D'), CC.NULL, mode])
+    return bytes([CC.ESC, CC.NULL, CC.NULL, ord('D'), mode])
 
 
 def set_option_command(option: ConfigOption | int, setting: int) -> bytes:
