@@ -6,7 +6,7 @@ from enum import StrEnum, unique
 from typing import Optional, Final
 
 from . import comms
-from .comms import SerialCommsInterface
+from .comms import SerialCommsInterface, FrameFormat
 from .common_types import ControlCode
 
 
@@ -19,16 +19,6 @@ class Encoding(StrEnum):
     ASCII = 'ascii'
     UTF8 = 'utf-8'
     UTF16 = 'utf-16'
-
-
-@unique
-class FrameFormat(StrEnum):
-    NONE_8BITS = '8 Bits None',
-    EVEN_8BITS = '8 Bits Even',
-    ODD_8BITS = '8 Bits Odd',
-    EVEN_7BITS = '7 Bits Even',
-    ODD_7BITS = '7 Bits Odd'
-
 
 class Printer:
     def __init__(self, comms_interface: SerialCommsInterface) -> None:
@@ -103,6 +93,24 @@ class Printer:
             )
         self._comms_interface.close()
 
+    def flush(self) -> None:
+        """
+        Flush the communications interface.
+
+        Raises
+        ------
+        CommsError
+            If a comms interface is not set.
+
+        """
+        self.log.info('Flushing comms interface')
+
+        if not self._comms_interface:
+            raise CommsError(
+                'Cannot flush comms interface as non has been set'
+            )
+        self._comms_interface.flush()
+
     def set_baud_rate(self, baud_rate: int) -> None:
         """
         Set for baud rate for the given interface.
@@ -127,7 +135,7 @@ class Printer:
 
         self._comms_interface.set_baud_rate(baud_rate)
 
-    def set_frame_format(self, format: FrameFormat | str) -> None:
+    def set_frame_format(self, format: FrameFormat) -> None:
         """
         Configure the number of data bits and the parity of a communications
         interface.
@@ -156,26 +164,8 @@ class Printer:
             raise CommsError(
                 'Cannot set frame format as no comms interface has been set'
             )
-
-        match format:
-            case FrameFormat.NONE_8BITS:
-                bits, parity = 8, comms.interface.Parity.NONE
-            case FrameFormat.EVEN_8BITS:
-                bits, parity = 8, comms.interface.Parity.EVEN
-            case FrameFormat.ODD_8BITS:
-                bits, parity = 8, comms.interface.Parity.ODD
-            case FrameFormat.EVEN_7BITS:
-                bits, parity = 7, comms.interface.Parity.EVEN
-            case FrameFormat.ODD_7BITS:
-                bits, parity = 7, comms.interface.Parity.ODD
-            case _:
-                raise ValueError(
-                    f'{format} is not a valid FrameFormat. {os.linesep}',
-                    f'Valid formats are: {[e.value for e in FrameFormat]}'
-                )
-
-        self._comms_interface.set_data_bits(bits)
-        self._comms_interface.set_parity(parity)
+        
+        self._comms_interface.set_frame_format(format)
 
     def send(self, data: bytes) -> None:
         '''
