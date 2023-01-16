@@ -1,10 +1,10 @@
 [tool.poetry]
-name = "martel_printer_test_lib"
+name = "martel_printer_test_library"
 version = "0.1.0"
 description = ""
 authors = ["Ryan Sullivan <ryansully96@googlemail.com>"]
 readme = "README.md"
-packages = [{include = "martel_printer_test_lib", from = "."}]
+packages = [{include = "martel_printer_test_library", from = "."}]
 
 [tool.poetry.dependencies]
 python = "^3.11"

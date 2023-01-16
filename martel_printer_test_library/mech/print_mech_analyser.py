@@ -7,8 +7,6 @@ from typing import Self
 import weakref
 from weakref import finalize
 
-from robot.libraries.BuiltIn import BuiltIn
-
 from . import printout_generation
 from printout import Printout
 from .signal_analyser import SaleaeLogic8
