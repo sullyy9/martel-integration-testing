@@ -19,7 +19,7 @@ class BaseCommsInterface(Protocol):
         open the conection.
 
         """
-        if not self._port.isOpen():
+        if not self._port.is_open:
             self._port.open()
 
     def close(self) -> None:
@@ -27,7 +27,7 @@ class BaseCommsInterface(Protocol):
         Close the conection.
 
         """
-        if self._port.isOpen():
+        if self._port.is_open:
             self._port.close()
 
     def send(self, data: bytes) -> None:
@@ -35,7 +35,7 @@ class BaseCommsInterface(Protocol):
         Write a number of bytes to the output buffer.
 
         """
-        if self._port.isOpen():
+        if self._port.is_open:
             self._port.write(data)
 
     def flush(self) -> None:
@@ -43,7 +43,7 @@ class BaseCommsInterface(Protocol):
         Flush any data in the output buffer.
 
         """
-        if self._port.isOpen():
+        if self._port.is_open:
             self._port.flush()
 
     def receive(self) -> Optional[bytes]:

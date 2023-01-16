@@ -54,7 +54,7 @@ class IrDAAdapter(SerialCommsInterface):
         self.disconnect = weakref.finalize(self, self._cleanup)
 
     def _cleanup(self) -> None:
-        if self._port.isOpen():
+        if self._port.is_open:
             self._port.close()
 
 # class HPIRAdapter(SerialCommsInterface):
