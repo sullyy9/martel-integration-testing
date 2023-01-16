@@ -27,7 +27,19 @@ def print_mode_command(font: int, double_height: bool = False, double_width: boo
             f'Value must be >= 0 and <= 3'
         )
 
-    word = (1 << font)
+    word = font
     word = word + 0x10 if double_height else word
     word = word + 0x20 if double_width else word
     return bytes([CC.ESC, ord('!'), word])
+
+def set_encoding_command(font: int) -> bytes:
+    log.info(f'Creating set encoding command with parameter font={font}')
+
+    if not 1 <= font <= 8:
+        raise MartelProtocolError from ValueError(
+            f'Invalid font value ({font}) to set encoding command helper.',
+            f'{os.linesep}',
+            f'Value must be >= 1 and <= 8'
+        )
+
+    return bytes([CC.ESC, ord('e'), font])
