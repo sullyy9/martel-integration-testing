@@ -80,6 +80,16 @@ class MeasureChannel(IntEnum):
     FONT_LIBRARY_VALID = 19
     CONFIG_OPTION_1 = 32
 
+class SetChannel(IntEnum):
+    CHARGE_TEST = 0
+    CTS_TEST = 1
+    FEED_PAPER = 3
+    SLEEP = 4
+    POWER_OFF = 5
+    ENABLE_PRINT_REDIRECT = 6
+    DISABLE_PRINT_REDIRECT = 7
+    PRINT_SELFTEST = 8
+
 
 def enable_debug_command(mode: DebugMode = DebugMode.AUTOTEST) -> bytes:
     return bytes([CC.ESC, CC.NULL, CC.NULL, ord('D'), mode])
@@ -91,12 +101,17 @@ def set_option_command(option: ConfigOption | int, setting: int) -> bytes:
 
 def measure_option_command(option: ConfigOption | int) -> bytes:
     channel = (MeasureChannel.CONFIG_OPTION_1 - 1) + option
-    return measure_command(channel)
+    return measure_channel_command(channel)
 
 
 def reset_command() -> bytes:
     return bytes([CC.ESC, CC.NULL, CC.NULL, ord('@')])
 
 
-def measure_command(channel: MeasureChannel | int) -> bytes:
+def measure_channel_command(channel: MeasureChannel | int) -> bytes:
     return bytes([CC.ESC, CC.NULL, CC.NULL, ord('M'), channel])
+
+def set_channel_command(channel: SetChannel | int) -> bytes:
+    return bytes([CC.ESC, CC.NULL, CC.NULL, ord('S'), channel])
+
+
