@@ -8,8 +8,9 @@ from robot.api.deco import keyword
 from robot.libraries.BuiltIn import BuiltIn
 from robot.api import Failure
 
-from printout import Printout, BLACK_BGR
+from print_mech_analyser import Printout
 
+BLACK_BGR = (0, 0, 0)
 
 class ComparisonListener:
     """

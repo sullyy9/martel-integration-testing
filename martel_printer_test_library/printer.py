@@ -15,8 +15,7 @@ from martel_printer import martel_protocol_helper as martel
 from martel_printer import Printer, USBPort, RS232Adapter, IrDAAdapter, Encoding
 from martel_printer.comms import SerialCommsInterface, FrameFormat
 
-from print_mech_analyser import PrintMechAnalyzer, LTPD245Emulator, EyeballMk1
-from printout import Printout
+from print_mech_analyser import PrintMechAnalyzer, LTPD245Emulator, EyeballMk1, Printout
 from tcu import RS232TCUComms, IrDATCUComms
 
 

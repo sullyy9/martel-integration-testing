@@ -8,7 +8,7 @@ import numpy as np
 from numpy import uint8, float64
 from numpy.typing import NDArray
 
-from printout import Printout
+from .printout import Printout
 
 DOTS_PER_LINE = 384
 

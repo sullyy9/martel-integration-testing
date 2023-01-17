@@ -8,7 +8,7 @@ import weakref
 from weakref import finalize
 
 from . import printout_generation
-from printout import Printout
+from .printout import Printout
 from .signal_analyser import SaleaeLogic8
 from .printout_generation import PrintMechState, PaperBuffer
 
