@@ -94,7 +94,7 @@ class TCU:
 
         """
         self._port: Final[Serial]
-        self.cleanup: Final[weakref.finalize]
+        self.disconnect: Final[weakref.finalize]
 
         ports = serial.tools.list_ports.comports()
         valid_port_names = [port.name for port in ports if
@@ -111,18 +111,18 @@ class TCU:
         self._port = Serial(port_name, timeout=2)
         self._close_port()
 
-        self.cleanup = weakref.finalize(self, self._cleanup)
+        self.disconnect = weakref.finalize(self, self._disconnect)
 
-    def _cleanup(self) -> None:
-        if self._port.isOpen():
+    def _disconnect(self) -> None:
+        if self._port.is_open:
             self._port.close()
 
     def _open_port(self) -> None:
-        if not self._port.isOpen():
+        if not self._port.is_open:
             self._port.open()
 
     def _close_port(self) -> None:
-        if self._port.isOpen():
+        if self._port.is_open:
             self._port.close()
 
     @staticmethod
