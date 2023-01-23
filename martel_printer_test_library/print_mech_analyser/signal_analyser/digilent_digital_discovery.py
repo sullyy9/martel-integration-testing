@@ -12,7 +12,7 @@ import numpy.core.records as nprec
 
 import pydwf
 import pydwf.utilities
-from pydwf.core.dwf_device import DwfLibrary, DwfDevice, DigitalIn, DigitalOut
+from pydwf.core.dwf_device import DwfDevice, DigitalIn, DigitalOut
 from pydwf import DwfEnumConfigInfo, DwfState, DwfAcquisitionMode, DwfDigitalInSampleMode
 from pydwf import DwfTriggerSource, DwfTriggerSlope
 from pydwf import DwfDigitalOutType, DwfDigitalOutIdle
@@ -20,7 +20,7 @@ from pydwf import PyDwfError, DwfLibraryError
 
 from .signal_analyser import SampleRecord, SignalAnalyser, DeviceError, CaptureTimeout
 
-dwf: Final[DwfLibrary] = pydwf.DwfLibrary()
+dwf: Final = pydwf.DwfLibrary()
 
 
 def maximize_digital_in_buffer_size(config_parameters):
@@ -230,6 +230,9 @@ class DigilentDDiscovery(SignalAnalyser):
 
     def clear_data(self) -> None:
         self._samples.clear()
+        self._timestamps.clear()
+        self._global_counter = 0
+        self._global_counter_lock = False
 
     def _get_samples(self) -> Optional[Tuple[NDArray[uint8], NDArray[float64]]]:
         '''
