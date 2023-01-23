@@ -1,3 +1,4 @@
+from datetime import timedelta
 from pathlib import Path
 from typing import Protocol
 
@@ -46,7 +47,7 @@ class SignalAnalyser(Protocol):
         '''
         ...
 
-    def process_capture(self) -> None:
+    def process_capture(self, timeout: timedelta = timedelta(seconds=10)) -> None:
         '''
         Process an ongoing capture. Some implementations of this protocol may
         require a capture to be processed while running. In these instances,
