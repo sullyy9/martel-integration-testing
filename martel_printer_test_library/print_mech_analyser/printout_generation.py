@@ -1,16 +1,14 @@
 import csv
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Final
 
 import cv2
 
 import numpy as np
-from numpy import uint8, float64
+from numpy import uint8, float32
 from numpy.typing import NDArray
 
 from .printout import Printout
-from .signal_analyser import SampleRecord
 
 DOTS_PER_LINE = 384
 
@@ -43,49 +41,66 @@ def read_mech_input(csv_path: Path):
                 motor_state=(motor_bl << 1) + (motor_al << 0)
             )
 
+
 class PrintMechEmulator:
     """
     Simulation of the current state of the printer's print mechanism.
 
     """
 
-    __slots__ = ('_last_input', '_shift_register', '_latch_register',
-                 '_burn_time', '_motor_steps', '_paper_buffer')
+    __slots__ = [
+        '_shift_register', '_latch_register', '_paper_buffer', '_burn_time',
+        '_motor_steps',  '_last_timestamp', '_last_clock', '_last_dst',
+        '_last_latch', '_last_motor_state'
+    ]
 
     def __init__(self, initial_state: np.record) -> None:
-        
+
         self._shift_register: NDArray[uint8] = np.zeros(DOTS_PER_LINE, uint8)
         self._latch_register: NDArray[uint8] = np.zeros(DOTS_PER_LINE, uint8)
-        self._last_input: np.record = initial_state
 
-        self._paper_buffer: NDArray[float64] = np.zeros([2, DOTS_PER_LINE])
+        self._paper_buffer: list[NDArray[float32]] = [
+            np.zeros((1, DOTS_PER_LINE), dtype=float32),
+            np.zeros((1, DOTS_PER_LINE), dtype=float32)
+        ]
 
         self._burn_time: float = 0.0
         self._motor_steps: int = 0
 
+        self._last_timestamp: float = initial_state['timestamp']
+        self._last_clock: uint8 = initial_state['clock']
+        self._last_dst: uint8 = initial_state['dst']
+        self._last_latch: uint8 = initial_state['latch']
+        self._last_motor_state: uint8 = initial_state['motor1'] + \
+            initial_state['motor2']
+
     def update(self, input: np.record) -> None:
+
+        timestamp = input['timestamp']
+        clock = input['clock']
+        latch = input['latch']
+
         # DST controls the activation of the thermal head
         # along with the data in the latch register
-        if self._last_input['dst'] == 1:
-            self._burn_time += input['timestamp'] - self._last_input['timestamp']
+        if self._last_dst:
+            self._burn_time += timestamp - self._last_timestamp
 
         # Data in the shift register is transfered to the latch
         # register when the latch is pulled low.
-        if self._last_input['latch'] == 1 and input['latch'] == 0:
+        if self._last_latch and (not latch):
             self._burn_latch_register()
             self._latch_register = self._shift_register.copy()
 
         # Data bits are valid on the clock's rising edge.
         # The bits get shifted in to the shift register.
-        if input['clock'] == 1 and self._last_input['clock'] == 0:
-            self._shift_register[0:-1] = self._shift_register[1:]
+        if clock and (not self._last_clock):
+            self._shift_register[:-1] = self._shift_register[1:]
             self._shift_register[-1] = input['data']
 
         # One dot line is 4 steps.
         motor_state = input['motor1'] + input['motor2']
-        last_motor_state = self._last_input['motor1'] + self._last_input['motor2']
 
-        if motor_state != last_motor_state:
+        if motor_state != self._last_motor_state:
             self._motor_steps += 2  # 2 steps every state change
             if self._motor_steps == 2:
                 self._burn_latch_register(between_lines=True)
@@ -94,7 +109,11 @@ class PrintMechEmulator:
                 self._advance_line()
                 self._motor_steps = 0
 
-        self._last_input = input
+        self._last_timestamp = timestamp
+        self._last_clock = clock
+        self._last_dst = input['dst']
+        self._last_latch = latch
+        self._last_motor_state = motor_state
 
     def _burn_latch_register(self, between_lines: bool = False) -> None:
         """
@@ -104,9 +123,9 @@ class PrintMechEmulator:
         """
         burn_buffer = self._latch_register * self._burn_time
 
-        self._paper_buffer[-2, :] += burn_buffer
+        self._paper_buffer[-2] += burn_buffer
         if between_lines:
-            self._paper_buffer[-1, :] += burn_buffer
+            self._paper_buffer[-1] += burn_buffer
 
         self._burn_time = 0.0
 
@@ -115,7 +134,7 @@ class PrintMechEmulator:
         Advance the paper by 1 dot line.
 
         """
-        self._paper_buffer = np.vstack([self._paper_buffer, np.zeros(DOTS_PER_LINE)])
+        self._paper_buffer.append(np.zeros(DOTS_PER_LINE, dtype=float32))
 
     def get_printout(self) -> Printout:
         """
@@ -123,16 +142,16 @@ class PrintMechEmulator:
 
         """
         self._burn_latch_register()
-
-        self._paper_buffer *= 25000  # Make each pixel an appropriate level of grey.
+        paper_buffer = np.vstack(self._paper_buffer)
+        paper_buffer *= 25000  # Make each pixel an appropriate level of grey.
 
         # Ensures that very faint pixels have at least the minimum grey level.
-        np.ceil(self._paper_buffer, self._paper_buffer)
+        np.ceil(paper_buffer, paper_buffer)
 
         # Map each element between 255 and 0 where:
         #   - 255 is white.
         #   - 0 is black.
-        img: NDArray[uint8] = np.maximum(255 - self._paper_buffer, 0).astype(uint8)
+        img: NDArray[uint8] = np.maximum(255 - paper_buffer, 0).astype(uint8)
 
         border = int(DOTS_PER_LINE * 0.10)
         img = cv2.copyMakeBorder(
