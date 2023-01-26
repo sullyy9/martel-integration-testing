@@ -1,4 +1,5 @@
 import csv
+import time
 import weakref
 from datetime import timedelta, datetime
 from pathlib import Path
@@ -6,7 +7,7 @@ from weakref import finalize
 from typing import Final, Optional, Tuple
 
 import numpy as np
-from numpy import uint8, uint32, float64
+from numpy import float32, int32, uint8
 from numpy.typing import NDArray
 import numpy.core.records as nprec
 
@@ -64,7 +65,15 @@ channels_capture_edge_both: Final[list[int]] = [
 
 
 class DigilentDDiscovery(SignalAnalyser):
-    _COUNT_FREQ: Final[int] = 10000
+    '''
+    Signal analyser implemnetation using the Digilent Digital DIscovery.
+    Uses 'Sync' acquisition mode to only capture samples on signal edges.
+    Additionally a counter is generated on the digital IO pins which is used to
+    calculate a rough timestamp for each sample. The counter signal is fed back
+    into the digital input pins so only 16 bits per sample is required.
+
+    '''
+    _COUNT_FREQ: Final[int] = 10000  # Generated counter frequency.
 
     def __init__(self) -> None:
         try:
@@ -82,15 +91,19 @@ class DigilentDDiscovery(SignalAnalyser):
         self._digout: Final[DigitalOut] = self._device.digitalOut
 
         self._samples: list[NDArray[uint8]] = []
-        self._timestamps: list[NDArray[float64]] = []
+        self._timestamps: list[NDArray[float32]] = []
 
+        # The counter embedded into the samples is only 8bits so a global
+        # counter is required to track the global count.
         self._global_counter: int = 0
-        self._global_counter_lock: bool = False
+        self._last_count: int = 0
 
         self.cleanup: Final[finalize] = weakref.finalize(self, self._cleanup)
 
     def _cleanup(self) -> None:
         try:
+            self._digout.reset()
+            self._digin.reset()
             self._device.close()
         except DwfLibraryError:
             pass
@@ -98,7 +111,7 @@ class DigilentDDiscovery(SignalAnalyser):
     def start_capture(self) -> None:
         self._start_counter(counter_channels, frequency=self._COUNT_FREQ)
 
-        # Use sync mode (only capture edges).
+        # Use sync mode only sample on edges.
         self._digin.dividerSet(-1)
 
         # Record samples only (no noise), with the pin states for each sample
@@ -111,7 +124,6 @@ class DigilentDDiscovery(SignalAnalyser):
         # Set the trigger for an edge on any pin.
         self._digin.triggerSourceSet(DwfTriggerSource.DetectorDigitalIn)
         self._digin.triggerSlopeSet(DwfTriggerSlope.Either)
-        self._digin.triggerAutoTimeoutSet(10)
 
         rising = 0
         falling = 0
@@ -130,63 +142,88 @@ class DigilentDDiscovery(SignalAnalyser):
         self._digin.triggerPositionSet(max_buffer_size)
         self._digin.bufferSizeSet(max_buffer_size)
 
-        # Start recording and wait until the prefill is full.
+        # Start recording.
         self._digin.configure(reconfigure=True, start=True)
-        while self._digin.status(read_data_flag=False) == DwfState.Prefill:
-            pass
+
+        # Slight delay required. Sample timing is inaccurate otherwise.
+        # TODO Investigate.
+        # Waiting for the device to enter the triggered state doesn't solve it.
+        time.sleep(0.5)
 
     def stop_capture(self) -> None:
         status = self._digin.status(read_data_flag=False)
         if status != DwfState.Ready or status != DwfState.Done:
-            self._device.reset()
+            self._digout.reset()
+            self._digin.reset()
 
     def process_capture(self, timeout: timedelta = timedelta(seconds=10)) -> None:
-        start_time = datetime.now()
+        timeout_point = datetime.now() + timeout
+        last_samples_timestamp: Optional[float] = None
 
-        while self._digin.status(read_data_flag=False) == DwfState.Prefill:
-            if datetime.now() >= start_time + timeout:
-                raise CaptureTimeout
+        while datetime.now() < timeout_point:
+            status = self._digin.status(read_data_flag=True)
 
-        # Wait for the trigger.
-        while self._digin.status(read_data_flag=True) == DwfState.Armed:
-            if datetime.now() >= start_time + timeout:
-                raise CaptureTimeout
-
-        # The samples in the prefill buffer when the trigger occurs make up the
-        # first set of data.
-        data = self._get_samples()
-        if data:
-            samples, timestamps = data
-            self._samples.append(samples)
-            self._timestamps.append(timestamps)
-
-        while self._digin.status(read_data_flag=True) == DwfState.Triggered:
-            if datetime.now() >= start_time + timeout:
-                self._digout.reset()
-                self._digin.reset()
-                raise CaptureTimeout
+            if status != DwfState.Triggered:
+                continue
 
             data = self._get_samples()
+            if data is not None:
+                samples, timestamps = data
+                self._samples.append(samples)
+                self._timestamps.append(timestamps)
+                last_samples_timestamp = self._timestamps[-1][-1]
 
-            if data:
-                self._samples.append(data[0])
-                self._timestamps.append(data[1])
-            else:
-                # End the capture if nothing happens for more than 1 second.
-                last_timestamp: float = 0.0
-                if len(self._timestamps) > 0:
-                    last_timestamp = self._timestamps[-1][-1]
-
+            # If there's no new data but there's been at least 1 valid sample,
+            # calculate how long the signals been idle. If more than 1 second,
+            # timeout.
+            elif last_samples_timestamp is not None:
                 current_time = self._global_counter * (1 / self._COUNT_FREQ)
-                idle_time = current_time - last_timestamp
-                if idle_time >= 1.0:
+                if current_time - last_samples_timestamp >= 1.0:
                     self._digout.reset()
                     self._digin.reset()
                     return
 
+        # Timed out
+        self._digout.reset()
+        self._digin.reset()
+        raise CaptureTimeout
+
+    def data_available_at_runtime(self) -> bool:
+        return True
+
+    def take_avalable_data(self) -> Optional[NDArray[np.record]]:
+        status = self._digin.status(read_data_flag=True)
+        if status == DwfState.Prefill:
+            return None
+
+        if status == DwfState.Armed:
+            return None
+
+        if status == DwfState.Triggered:
+            data = self._get_samples()
+            if data is None:
+                return None
+
+            samples, timestamps = data
+            samples = np.expand_dims(samples, axis=0)
+            samples = np.unpackbits(
+                samples, axis=0, count=6, bitorder='little')
+
+            return nprec.fromarrays([
+                timestamps,
+                samples[0],
+                samples[1],
+                samples[2],
+                samples[3],
+                samples[4],
+                samples[5]
+            ],
+                dtype=SampleRecord
+            )
+
     def get_data(self) -> NDArray[np.record]:
         samples: NDArray[uint8] = np.concatenate(self._samples)
-        timestamps: NDArray[float64] = np.concatenate(self._timestamps)
+        timestamps: NDArray[float32] = np.concatenate(self._timestamps)
 
         samples = np.expand_dims(samples, axis=0)
         samples = np.unpackbits(samples, axis=0, count=6, bitorder='little')
@@ -234,7 +271,7 @@ class DigilentDDiscovery(SignalAnalyser):
         self._global_counter = 0
         self._global_counter_lock = False
 
-    def _get_samples(self) -> Optional[Tuple[NDArray[uint8], NDArray[float64]]]:
+    def _get_samples(self) -> Optional[Tuple[NDArray[uint8], NDArray[float32]]]:
         '''
         Get a set of samples and their respective timestamps. If there are no
         new samples that represent a change in state of the mech, return None.
@@ -248,26 +285,34 @@ class DigilentDDiscovery(SignalAnalyser):
 
         # Split the data into the counter signal and actual data.
         samples: NDArray[uint8] = data[0::2]
-        counter: NDArray[uint32] = data[1::2].astype(uint32)
+        counter: NDArray[int32] = data[1::2].astype(int32)
 
         # Convert the repeating 8 bit counter to global time index.
-        for i in range(0, len(counter)):
-            if counter[i] >= 128 and self._global_counter_lock:
-                self._global_counter_lock = False
+        # Check if the counter has rolled over from the last data set.
+        if counter[0] < self._last_count:
+            self._global_counter += (np.iinfo(uint8).max + 1)
+        self._last_count = counter[-1]
 
-            elif counter[i] < 128 and not self._global_counter_lock:
-                self._global_counter += np.iinfo(uint8).max
-                self._global_counter_lock = True
+        # Split the counter where it has rolled over.
+        count_cycles = np.split(
+            counter, np.flatnonzero(np.diff(counter) < 0) + 1)
 
-            counter[i] += self._global_counter
+        # For each counter run, convert it into the global counter domain.
+        for i in range(0, len(count_cycles)):
+            count_cycles[i] += self._global_counter
 
-        # Convert the time indicies into timestamps.
-        timestamps: NDArray[float64] = counter * (1 / self._COUNT_FREQ)
+            # Dont increment global counter on the last cycle as there may not
+            # be a rollover.
+            if i < (len(count_cycles) - 1):
+                self._global_counter += (np.iinfo(uint8).max + 1)
+
+        # Convert the global counter into timestamps.
+        timestamps: NDArray[float32] = counter * (1 / self._COUNT_FREQ)
 
         # Return None if this set doesn't include any new samples that
         # represent a change in state.
         last_sample = self._samples[-1][-1] if len(self._samples) > 0 else None
-        non_repeated = samples != np.r_[samples[1:], None]
+        non_repeated = samples[:-1] != samples[1:]
         if (not np.any(non_repeated[:-1])) and samples[0] == last_sample:
             return None
 
