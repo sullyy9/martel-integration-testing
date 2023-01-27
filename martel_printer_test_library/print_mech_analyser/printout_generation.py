@@ -153,16 +153,4 @@ class PrintMechEmulator:
         #   - 0 is black.
         img: NDArray[uint8] = np.maximum(255 - paper_buffer, 0).astype(uint8)
 
-        border = int(DOTS_PER_LINE * 0.10)
-        img = cv2.copyMakeBorder(
-            img,
-            top=border,
-            bottom=border,
-            left=border,
-            right=border,
-            borderType=cv2.BORDER_CONSTANT,
-            dst=img,  # type: ignore
-            value=255
-        )
-
         return Printout(img)
