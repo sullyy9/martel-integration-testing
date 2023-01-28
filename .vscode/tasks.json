@@ -45,6 +45,17 @@
                 "-s", "${workspaceFolder}/martel_printer_test_lib"
             ],
             "problemMatcher": []
+        },
+        {
+            "label": "Run Virtual Mech Application",
+            "type": "shell",
+            "command": "poetry",
+            "args": [
+                "run",
+                "python", "-m",
+                "martel_print_mech_analyser"
+            ],
+            "problemMatcher": []
         }
     ]
 }
