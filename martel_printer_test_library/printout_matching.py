@@ -1,14 +1,23 @@
 from pathlib import Path
-from typing import Optional
+from typing import Final, Optional
+
+import numpy as np
+from numpy import uint8
+from numpy.typing import NDArray
 
 import cv2 as cv
-import numpy as np
 
 from robot.api.deco import keyword
 from robot.libraries.BuiltIn import BuiltIn
 from robot.api import Failure
 
-from printout import Printout, BLACK_BGR
+from martel_print_mech_analyser import Printout
+from martel_print_mech_analyser.printout import WHITE, BLACK
+
+WHITE_BGR: Final = (255, 255, 255)
+BLACK_BGR: Final = (0, 0, 0)
+GREEN_BGR: Final = (0, 200, 0)
+RED_BGR: Final = (0, 0, 255)
 
 
 class ComparisonListener:
@@ -69,21 +78,139 @@ class ComparisonListener:
 
             filename = BuiltIn().get_variable_value("${TEST NAME}") + '.png'
             filepath = Path(self._get_comparison_dir(), filename)
-
-            create_comparison_and_save(
+            comparison = create_comparison(
                 sample,
                 printout,
-                filepath,
-                add_to_test_report=True
+                annotation_old='Sample',
+                annotation_new='Printout'
+            )
+
+            cv.imwrite(str(filepath), comparison)
+
+            # Append the iamge to the Robot Framework test report.
+            BuiltIn().set_test_message("\n", append=True)
+            BuiltIn().set_test_message(
+                f"*HTML* <img src='{filepath.absolute()}' width='100%'/>",
+                append=True
             )
 
 
+def saturate_burned_pixels(print: Printout) -> Printout:
+    '''
+    Make any burned pixels completely black.
+
+    Parameters
+    ----------
+    print : Printout
+
+    Returns
+    -------
+    Printout
+
+    '''
+    return Printout(np.where(print == WHITE, WHITE, BLACK).astype(np.uint8))
+
+
+def crop_excess_length(print: Printout) -> Printout:
+    '''
+    Crop the excess whitespace at the top and bottom of a printout.
+
+    Parameters
+    ----------
+    print : Printout
+
+    Returns
+    -------
+    Printout
+
+    '''
+    row: NDArray[uint8] = np.array(np.any(print == BLACK, axis=1))
+    y1, y2 = row.argmax(), row.size - row[::-1].argmax()
+    return print[y1:y2]
+
+
+def create_diff(old: Printout, new: Printout) -> NDArray:
+    if old.width != new.width:
+        raise Failure('Printouts are of differing width.')
+
+    diff_height: int = max(old.length, new.length)
+
+    # Make both images bicolour and crop out excess length.
+    old, new = (saturate_burned_pixels(p) for p in (old, new))
+    old, new = (crop_excess_length(p) for p in (old, new))
+
+    old, new = old[:new.length], new[:old.length]
+
+    diff = np.full((diff_height, old.width, 3), WHITE_BGR, dtype=uint8)
+
+    # Compare pixels between the 2 printouts. Where a black pixel has been
+    # added from self to other, make that pixel green in the diff. Where
+    # the reverse is true, make it red in the diff.
+    diff[np.where((old == BLACK) & (new == BLACK))] = BLACK_BGR
+    diff[np.where((old == WHITE) & (new == BLACK))] = GREEN_BGR
+    diff[np.where((old == BLACK) & (new == WHITE))] = RED_BGR
+    return diff
+
+
 @keyword('Load Printout')
-def load_printout_from_file(filepath: str) -> Printout:
+def load_printout(filepath: str) -> Printout:
     try:
-        return Printout.open(Path(filepath))
+        return Printout.from_file(Path(filepath))
     except FileNotFoundError as exc:
         raise Failure(exc)
+
+
+@keyword('Save Printout')
+def save_printout(printout: Printout, filepath: str) -> None:
+    printout.save(Path(filepath))
+
+
+@keyword('Printout Similarity')
+def printout_similarity(print1: Printout, print2: Printout) -> float:
+    '''
+    Calculate the similarity between 2 printouts. Both printouts will be
+    pre-processed before hand:
+        - Any burned pixels are made completely black.
+        - Any excess whitespace at the top and bottom will be trimmed.
+
+    The similarity is given as the percentage of pixels that match between the
+    2 printouts.
+
+    Parameters
+    ----------
+    print1 : Printout
+        Printout to compare.
+
+    print2 : Printout
+        Printout to compare.
+
+    Returns
+    -------
+    float
+        Similarity given as the percentage of pixels that match between the
+        2 printouts.
+
+    Raises
+    ------
+    Failure
+        If the printouts are not equal width. This implies they were produced
+        by different print mechanisms and are not comparable.
+
+    '''
+    if print1.width != print2.width:
+        raise Failure('Printouts are of differing width.')
+
+    # Make both images bicolour and crop out excess length.
+    print1, print2 = (saturate_burned_pixels(p) for p in (print1, print2))
+    print1, print2 = (crop_excess_length(p) for p in (print1, print2))
+
+    # Find the number of pixels that are the same where the printouts overlap.
+    matching_pixels = np.sum(print1[:print2.length] == print2[:print1.length])
+
+    # Calculate similarity as the percentage of pixels that are the same.
+    # Any pixels where the printouts don't overlap are taken to be different.
+    longest_length: int = max(print1.length, print2.length)
+    return matching_pixels / (print1.width * longest_length)
 
 
 @keyword('Printouts Should Match Exactly')
@@ -107,123 +234,86 @@ def should_match_exactly(sample: Printout, printout: Printout) -> None:
         If one or more dots do not match between the two printouts.
 
     """
-    match_percent = sample.compare_with(printout) * 100
-    if match_percent != 100:
-        diff_percent = 100 - match_percent
-        raise Failure(
-            f'Expected the printout to exactly match the sample. ' +
-            f'Howver the printout does not exactly match the sample. ' +
-            f'{diff_percent}% of the total dots do not match.'
-        )
+    similarity: float = printout_similarity(sample, printout)
+
+    if similarity != 1.0:
+        sim_percent: float = similarity * 100
+        raise Failure(f'Printout only matches the sample by {sim_percent}')
 
 
-@keyword('Printouts Should Not Match')
-def should_not_match_exactly(sample: Printout, printout: Printout) -> None:
-    """
-    Verify that the content of the two printouts do not match. Each dot will
-    be compared between them and at least one must not be the same. However any
-    whitespace around the outside of the printout will not be taken into
-    account.
-
-    Parameters
-    ----------
-    sample : Printout
-        Sample printout to compare against.
-
-    printout : Printout
-        Printout to compare against the sample.
-
-    Raises
-    ------
-    Failure
-        If all of the dots match between the two printouts.
-
-    """
-    match_percent = sample.compare_with(printout) * 100
-    if match_percent == 100:
-        raise Failure(
-            f'Expected the printout to not match the sample. ' +
-            f'However the printout exactly matches the sample.'
-        )
-
-
-@keyword(name='Create And Save Comparison')
-def create_comparison_and_save(sample: Printout,
-                               printout: Printout,
-                               filepath: Path,
-                               add_to_test_report: bool = False) -> None:
+@keyword('Create Comparison')
+def create_comparison(
+        old: Printout,
+        new: Printout,
+        annotation_old: str = 'Old',
+        annotation_new: str = 'New') -> NDArray[uint8]:
     """
     Create an image that details the differences between two printouts. This
-    image will contain the given sample and printout as well as a diff image
-    which will colour individual dots depending on if they were added or
-    removed from the sample to the printout.
+    image will contain the given printouts as well as a diff image which will
+    colour individual dots depending on if they were added or removed from
+    'old' to 'new'.
 
     Parameters
     ----------
-    sample : Printout
-        Sample printout to compare against.
+    old : Printout
+        Printout to compare against.
 
-    printout : Printout
-        Printout to compare against the sample.
+    new : Printout
+        Printout to compare against old.
 
-    filepath : Printout
-        Name of the image file and location to save it to. If the file already
-        exists, it will be overwritten.
+    annotation_old : str
+        Annotation to add above the old printout.
 
-    add_to_test_report : bool
-        If true the comparison image will be added to the report generated by
-        Robot Framework, under the currently active test.
+    annotation_new : str
+        Annotation to add above the new printout.
+
+    Returns
+    -------
+    NDArray[uint8]
+        Comparison image.
 
     """
-    # Equilize the printout sizes.
-    if sample.width < printout.width:
-        sample.extend_width_to(printout.length)
-    elif printout.width < sample.width:
-        printout.extend_width_to(sample.width)
+    diff = create_diff(old, new)
 
-    if sample.length < printout.length:
-        sample.extend_length_to(printout.length)
-    elif printout.length < sample.length:
-        printout.extend_length_to(sample.length)
+    old_bgr = cv.cvtColor(np.array(old), cv.COLOR_GRAY2RGB)
+    new_bgr = cv.cvtColor(np.array(new), cv.COLOR_GRAY2RGB)
 
-    # Create the diff.
-    diff = sample.create_diff_with(printout)
+    # Make sure both printouts are the same length.
+    if old_bgr.shape[0] < new_bgr.shape[0]:
+        height_diff = new_bgr.shape[0] - old_bgr.shape[0]
+        extra = np.full((height_diff, old.width, 3), WHITE_BGR)
+        old_bgr = np.append(old_bgr, extra, axis=0)
 
-    # Add text to each image.
-    sample_col = cv.putText(
-        cv.cvtColor(sample.get_image(), cv.COLOR_GRAY2RGB),
-        'Sample',
+    elif new_bgr.shape[0] < old_bgr.shape[0]:
+        height_diff = old_bgr.shape[0] - new_bgr.shape[0]
+        extra = np.full((height_diff, new.width, 3), WHITE_BGR)
+        new_bgr = np.append(new_bgr, extra, axis=0)
+
+    # Add the annotations to each image.
+    border_type = cv.BORDER_CONSTANT
+    old_bgr = cv.putText(
+        cv.copyMakeBorder(old_bgr, 20, 0, 0, 0, border_type, value=WHITE_BGR),
+        annotation_old,
         org=(0, 15),
         fontFace=cv.FONT_HERSHEY_PLAIN,
         fontScale=1,
         color=BLACK_BGR
     )
-    printout_col = cv.putText(
-        cv.cvtColor(printout.get_image(), cv.COLOR_GRAY2RGB),
-        'Printout',
+    new_bgr = cv.putText(
+        cv.copyMakeBorder(new_bgr, 20, 0, 0, 0, border_type, value=WHITE_BGR),
+        annotation_new,
         org=(0, 15),
         fontFace=cv.FONT_HERSHEY_PLAIN,
         fontScale=1,
         color=BLACK_BGR
     )
     diff = cv.putText(
-        diff,
-        'Diff',
+        cv.copyMakeBorder(diff, 20, 0, 0, 0, border_type, value=WHITE_BGR),
+        'Difference',
         org=(0, 15),
         fontFace=cv.FONT_HERSHEY_PLAIN,
         fontScale=1,
         color=BLACK_BGR
     )
 
-    # Place the images side by side and save.
-    comparison = np.hstack((sample_col, printout_col, diff))
-
-    cv.imwrite(str(filepath.absolute()), comparison)
-
-    # Append the iamge to the Robot Framework test report.
-    if add_to_test_report:
-        BuiltIn().set_test_message("\n", append=True)
-        BuiltIn().set_test_message(
-            f"*HTML* <img src='{filepath.absolute()}' width='100%'/>",
-            append=True
-        )
+    return np.hstack((old_bgr, new_bgr, diff)).astype(uint8)
