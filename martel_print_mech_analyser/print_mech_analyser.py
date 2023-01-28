@@ -8,14 +8,6 @@ from .printout import Printout
 from .signal_analyser import SignalAnalyser
 
 
-class MechPrintError(Exception):
-    pass
-
-
-class MechFileError(Exception):
-    pass
-
-
 class MechCaptureTimeout(Exception):
     pass
 

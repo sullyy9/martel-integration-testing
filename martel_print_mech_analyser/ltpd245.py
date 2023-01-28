@@ -4,7 +4,6 @@ from pathlib import Path
 from typing import Optional, Final
 
 import numpy as np
-from numpy.typing import NDArray
 
 from .printout import Printout
 from .signal_analyser import SignalAnalyser, CaptureTimeout

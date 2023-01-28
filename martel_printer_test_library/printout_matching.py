@@ -11,8 +11,8 @@ from robot.api.deco import keyword
 from robot.libraries.BuiltIn import BuiltIn
 from robot.api import Failure
 
-from .print_mech_analyser import Printout
-from .print_mech_analyser.printout import WHITE, BLACK
+from martel_print_mech_analyser import Printout
+from martel_print_mech_analyser.printout import WHITE, BLACK
 
 WHITE_BGR: Final = (255, 255, 255)
 BLACK_BGR: Final = (0, 0, 0)

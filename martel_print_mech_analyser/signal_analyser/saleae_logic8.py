@@ -45,7 +45,9 @@ class AnlayserInitError(Exception):
 class AnalyserExportError(Exception):
     pass
 
-# TODO Should implement the SignalAnalyser protocol. 
+# TODO Should implement the SignalAnalyser protocol.
+
+
 class SaleaeLogic8:
     __slots__ = ('__weakref__', '_manager', '_device', '_capture',
                  '_capture_running', 'cleanup')
