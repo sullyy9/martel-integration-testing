@@ -85,7 +85,7 @@ class PrintMechEmulator:
 
         # Data in the shift register is transfered to the latch
         # register when the latch is pulled low.
-        if self._last_latch and (not latch):
+        if (not self._last_latch) and latch:
             self._burn_latch_register()
             self._latch_register = self._shift_register.copy()
 
