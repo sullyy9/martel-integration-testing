@@ -6,10 +6,10 @@ Documentation       Variables containing printout samples and the text used to
 *** Variables ***
 ${SAMPLE TEXT}                  Martel Instruments is a leading manufacturer and global
 ...                             supplier of bespoke and innovative commercial printing
-...                             solutions.\n
+...                             solutions.
 
 ${SAMPLE TEXT SHORT}            Martel Instruments is a leading manufacturer
-...                             and global... \n
+...                             and global...
 
 ${ARIAL16 SAMPLE}               ${SAMPLE DIR}/arial16_sample_text.png
 ${ARIAL12 SAMPLE}               ${SAMPLE DIR}/arial12_sample_text.png
