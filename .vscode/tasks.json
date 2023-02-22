@@ -16,7 +16,7 @@
             "args": [
                 "run", "robot",
                 "--outputdir", "${workspaceFolder}/output",
-                "--pythonpath", "${workspaceFolder}/martel_printer_test_lib",
+                "--pythonpath", "${workspaceFolder}/martel_printer_test_library",
                 "--variable", "SAMPLE_DIR:${workspaceFolder}/samples",
                 "--listener", "printout_matching.ComparisonListener",
                 "${workspaceFolder}/testsuite"
@@ -29,7 +29,7 @@
             "command": "poetry",
             "args": [
                 "run", "robot",
-                "--outputdir", "${workspaceFolder}/sample_output",
+                "--outputdir", "${workspaceFolder}/output",
                 "--pythonpath", "${workspaceFolder}/martel_printer_test_lib",
                 "${workspaceFolder}/sample_generation"
             ],
@@ -42,7 +42,7 @@
             "args": [
                 "run", "python",
                 "-m", "unittest", "discover",
-                "-s", "${workspaceFolder}/martel_printer_test_lib"
+                "-s", "${workspaceFolder}/martel_printer_test_library"
             ],
             "problemMatcher": []
         },
