@@ -33,7 +33,7 @@ class PrintMechAnalyser(Protocol):
         '''
         ...
 
-    def start_capture(self, name: Optional[str] = None) -> None:
+    def start_capture(self) -> None:
         '''
         Start a new capture. Any captured print will be append to any existing
         print.
