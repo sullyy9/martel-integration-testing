@@ -88,7 +88,7 @@ class Printout(np.lib.mixins.NDArrayOperatorsMixin):
         return self._img.shape[:2]
 
     def save(self, path: Path) -> None:
-        cv.imwrite(str(path), np.array(self))
+        cv.imwrite(str(path.absolute()), np.array(self))
 
     def show(self, window_name: Optional[str] = None, wait: bool = False) -> None:
         if window_name is None:
