@@ -1,5 +1,5 @@
 output/
-sample_output/
+samples/
 .venv/
 .pytest_cache/
 __pycache__
