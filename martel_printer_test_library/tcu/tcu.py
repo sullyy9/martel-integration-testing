@@ -22,23 +22,47 @@ class TCUProtocolError(Exception):
 
 @unique
 class RelayChannel(IntEnum):
-    COMMS_MODE_BIT_0 = 0x0C  # Use the COMMS_MODE channel instead.
-    COMMS_MODE_BIT_1 = 0x0D  # Use the COMMS_MODE channel instead.
-    COMMS_MODE_BIT_2 = 0x0E  # Use the COMMS_MODE channel instead.
-    COMMS_MODE_BIT_3 = 0x0F  # Use the COMMS_MODE channel instead.
-
-    BAUD_RATE_BIT_0 = 0x10  # Use the BAUD_RATE channel instead.
-    BAUD_RATE_BIT_1 = 0x11  # Use the BAUD_RATE channel instead.
-    BAUD_RATE_BIT_2 = 0x12  # Use the BAUD_RATE channel instead.
-    BAUD_RATE_BIT_3 = 0x1C  # Use the BAUD_RATE channel instead.
 
     PARITY_ENABLE = 0x13    # 0: None, 1: See PARITY_EVEN_ODD
     PARITY_EVEN_ODD = 0x14  # 0: Odd, 1: Even
 
+    PROTOCOL_BIT_0 = 0x18
+    PROTOCOL_BIT_1 = 0x19
+
     DATA_BITS = 0x1A  # 0: 8 bits, 1: 7 bits
+
+    BATTERY_VOLTAGE = 0x20
+    BATTERY_ENABLE = 0x21
+    BATTERY_CURRENT_LOW = 0x22
+    BATTERY_TRIP = 0x23
+
+    CHARGER_VOLTAGE = 0x30
+    CHARGER_ENABLE = 0x31
+    CHARGER_CURRENT_LOW = 0x32
+    CHARGER_TRIP = 0x33
 
     COMMS_MODE = 0x40
     BAUD_RATE = 0x41
+
+
+@unique
+class MeasureChannel(IntEnum):
+    BATTERY_CURRENT = 0x00
+    CHARGER_CURRENT = 0x01
+    CTS_LEVEL = 0x02
+
+    BATTERY_VOLTAGE = 0x03
+    BATTERY_VOLTAGE_DELTA_100MS = 0x04
+    BATTERY_VOLTAGE_DELTA_500MS = 0x05
+    BATTERY_VOLTAGE_DELTA_2S = 0x06
+    BATTERY_VOLTAGE_DELTA_5S = 0x07
+
+    TCU_VERSION = 0x08
+
+    REFERENCE_VOLTAGE = 0x09
+    INTERNAL_BATTERY_VOLTAGE = 0x0A
+    INTERNAL_CHARGER_VOLTAGE = 0x0B
+
 
 
 @unique
