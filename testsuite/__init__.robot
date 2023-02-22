@@ -2,13 +2,10 @@
 Documentation       Integration testing suite for Martel MCP1800 B series
 ...                 printers.
 
-Library             printer.Printer
+Library             martel_printer_test_library.PrinterTestLibrary
+Library             martel_printer_test_library.PrinterDebugLibrary
 
 Suite Setup         Run Keywords
-...                     Create Printer Library Output Directories
-...                     Select Printer Mechanism Analyzer
-...                     Select Printer USB Interface
-...                     Select Printer RS232 Interface
-...                     Select Printer Ir Interface
-Suite Teardown      Shutdown Printer
-Test Setup          Clear Printer Print Buffer
+...                     Setup Printer Test Library
+...                     Setup Printer Debug Library
+Test Setup          Printer Clear Print Buffer

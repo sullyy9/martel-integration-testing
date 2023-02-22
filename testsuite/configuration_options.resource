@@ -1,7 +1,8 @@
 *** Settings ***
 Documentation       Resource file for config option related stuff.
 
-Library             printer.Printer
+Library             martel_printer_test_library.PrinterTestLibrary
+Library             martel_printer_test_library.PrinterDebugLibrary
 
 
 *** Variables ***
@@ -73,25 +74,3 @@ Library             printer.Printer
 ...                         None=1
 ...                         Software=2
 ...                         Hardware=3
-
-
-*** Keywords ***
-Set Printer Option "${config option}" To "${setting}"
-    [Documentation]
-    ...    Set the given configuration option to the given setting.
-    ...
-    ...    *Arguments*
-    ...    -----------
-    ...    ${config option}: One of the dicts defined in
-    ...    configuration_options.resource.
-    ...
-    ...    ${setting}: A key from the dict specified by ${config option}.
-
-    Enable Printer Debug Mode
-    Set Printer Option    ${config option}[Option]    ${config option}[${setting}]
-    Reset Printer
-    Close Printer "USB" Interface
-    Sleep    1s
-    Open Printer "USB" Interface
-    Send Printer Command    Feed Line\n
-    Sleep    1s

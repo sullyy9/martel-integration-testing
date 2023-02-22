@@ -1,127 +1,126 @@
 *** Settings ***
 Documentation       Tests for RS232 baud rate.
 
-Library             printer.Printer
+Library             martel_printer_test_library.PrinterTestLibrary
+Library             martel_printer_test_library.PrinterDebugLibrary
 Resource            ../configuration_options.resource
-Resource            ../utils.resource
 Resource            ../samples.resource
 
 Suite Setup         Run Keywords
-...                     Set Printer Option "${Default Font}" To "Default"
-...                     Set Printer Option "&{RS232 FRAME FORMAT}" To "Default"
-...                     Set Test System "RS232" Frame Format To "8 Bits None"
+...                     RS232 Configure    baud_rate=9600    data_bits=8    parity=None    AND
+...                     Printer Set Option    ${RS232 FRAME FORMAT}[Option]    ${RS232 FRAME FORMAT}[Default]    AND
+...                     Printer Reset
 Suite Teardown      Run Keywords
-...                     Set Printer Option "&{RS232 BAUD RATE}" To "Default"
-...                     Set Test System "RS232" Baud Rate To "9600"
+...                     RS232 Configure    baud_rate=9600    data_bits=8    parity=None    AND
+...                     Printer Set Option    ${RS232 BAUD RATE}[Option]    ${RS232 BAUD RATE}[Default]    AND
+...                     Printer Reset
 
 Force Tags          baud_rate
 
 
 *** Test Cases ***
 Test RS232 At 600 Baud
-    [Documentation]    Verify that the given RS232 baud rate works correctly.
+    [Documentation]    Test the RS232 interface at 600 baud.
 
-    Set Printer Option "&{RS232 BAUD RATE}" To "600"
-    Set Test System "RS232" Baud Rate To "600"
+    RS232 Configure    baud_rate=600
+    Printer Set Option    ${RS232 BAUD RATE}[Option]    ${RS232 BAUD RATE}[600]
+    Printer Reset
 
-    Print    ${SAMPLE TEXT SHORT}    interface=RS232
-    Wait Until Print Complete
-    Printout Should Match "${ARIAL16 SAMPLE SHORT}" Exactly
+    Printer Redirect Enable
+    RS232 Send And Expect Echo    ${SAMPLE TEXT}
 
 Test RS232 At 1200 Baud
-    [Documentation]    Verify that the given RS232 baud rate works correctly.
+    [Documentation]    Test the RS232 interface at 1200 baud.
 
-    Set Printer Option "&{RS232 BAUD RATE}" To "1200"
-    Set Test System "RS232" Baud Rate To "1200"
+    RS232 Configure    baud_rate=1200
+    Printer Set Option    ${RS232 BAUD RATE}[Option]    ${RS232 BAUD RATE}[1200]
+    Printer Reset
 
-    Print    ${SAMPLE TEXT SHORT}    interface=RS232
-    Wait Until Print Complete
-    Printout Should Match "${ARIAL16 SAMPLE SHORT}" Exactly
+    Printer Redirect Enable
+    RS232 Send And Expect Echo    ${SAMPLE TEXT}
 
 Test RS232 At 2400 Baud
-    [Documentation]    Verify that the given RS232 baud rate works correctly.
+    [Documentation]    Test the RS232 interface at 2400 baud.
 
-    Set Printer Option "&{RS232 BAUD RATE}" To "2400"
-    Set Test System "RS232" Baud Rate To "2400"
+    RS232 Configure    baud_rate=2400
+    Printer Set Option    ${RS232 BAUD RATE}[Option]    ${RS232 BAUD RATE}[2400]
+    Printer Reset
 
-    Print    ${SAMPLE TEXT SHORT}    interface=RS232
-    Wait Until Print Complete
-    Printout Should Match "${ARIAL16 SAMPLE SHORT}" Exactly
+    Printer Redirect Enable
+    RS232 Send And Expect Echo    ${SAMPLE TEXT}
 
 Test RS232 At 4800 Baud
-    [Documentation]    Verify that the given RS232 baud rate works correctly.
+    [Documentation]    Test the RS232 interface at 4800 baud.
 
-    Set Printer Option "&{RS232 BAUD RATE}" To "4800"
-    Set Test System "RS232" Baud Rate To "4800"
+    RS232 Configure    baud_rate=4800
+    Printer Set Option    ${RS232 BAUD RATE}[Option]    ${RS232 BAUD RATE}[4800]
+    Printer Reset
 
-    Print    ${SAMPLE TEXT SHORT}    interface=RS232
-    Wait Until Print Complete
-    Printout Should Match "${ARIAL16 SAMPLE SHORT}" Exactly
+    Printer Redirect Enable
+    RS232 Send And Expect Echo    ${SAMPLE TEXT}
 
 Test RS232 At 9600 Baud
-    [Documentation]    Verify that the given RS232 baud rate works correctly.
+    [Documentation]    Test the RS232 interface at 9600 baud.
 
-    Set Printer Option "&{RS232 BAUD RATE}" To "9600"
-    Set Test System "RS232" Baud Rate To "9600"
+    RS232 Configure    baud_rate=9600
+    Printer Set Option    ${RS232 BAUD RATE}[Option]    ${RS232 BAUD RATE}[9600]
+    Printer Reset
 
-    Print    ${SAMPLE TEXT SHORT}    interface=RS232
-    Wait Until Print Complete
-    Printout Should Match "${ARIAL16 SAMPLE SHORT}" Exactly
+    Printer Redirect Enable
+    RS232 Send And Expect Echo    ${SAMPLE TEXT}
 
 Test RS232 At 19200 Baud
-    [Documentation]    Verify that the given RS232 baud rate works correctly.
+    [Documentation]    Test the RS232 interface at 19200 baud.
 
-    Set Printer Option "&{RS232 BAUD RATE}" To "19200"
-    Set Test System "RS232" Baud Rate To "19200"
+    RS232 Configure    baud_rate=19200
+    Printer Set Option    ${RS232 BAUD RATE}[Option]    ${RS232 BAUD RATE}[19200]
+    Printer Reset
 
-    Print    ${SAMPLE TEXT SHORT}    interface=RS232
-    Wait Until Print Complete
-    Printout Should Match "${ARIAL16 SAMPLE SHORT}" Exactly
+    Printer Redirect Enable
+    RS232 Send And Expect Echo    ${SAMPLE TEXT}
 
 Test RS232 At 38400 Baud
-    [Documentation]    Verify that the given RS232 baud rate works correctly.
+    [Documentation]    Test the RS232 interface at 38400 baud.
 
-    Set Printer Option "&{RS232 BAUD RATE}" To "38400"
-    Set Test System "RS232" Baud Rate To "38400"
+    RS232 Configure    baud_rate=38400
+    Printer Set Option    ${RS232 BAUD RATE}[Option]    ${RS232 BAUD RATE}[38400]
+    Printer Reset
 
-    Print    ${SAMPLE TEXT SHORT}    interface=RS232
-    Wait Until Print Complete
-    Printout Should Match "${ARIAL16 SAMPLE SHORT}" Exactly
+    Printer Redirect Enable
+    RS232 Send And Expect Echo    ${SAMPLE TEXT}
 
 Test RS232 At 57600 Baud
-    [Documentation]    Verify that the given RS232 baud rate works correctly.
+    [Documentation]    Test the RS232 interface at 57600 baud.
 
-    Set Printer Option "&{RS232 BAUD RATE}" To "57600"
-    Set Test System "RS232" Baud Rate To "57600"
+    RS232 Configure    baud_rate=57600
+    Printer Set Option    ${RS232 BAUD RATE}[Option]    ${RS232 BAUD RATE}[57600]
+    Printer Reset
 
-    Print    ${SAMPLE TEXT SHORT}    interface=RS232
-    Wait Until Print Complete
-    Printout Should Match "${ARIAL16 SAMPLE SHORT}" Exactly
+    Printer Redirect Enable
+    RS232 Send And Expect Echo    ${SAMPLE TEXT}
 
 Test RS232 At 115200 Baud
-    [Documentation]    Verify that the given RS232 baud rate works correctly.
+    [Documentation]    Test the RS232 interface at 115200 baud.
 
-    Set Printer Option "&{RS232 BAUD RATE}" To "115200"
-    Set Test System "RS232" Baud Rate To "115200"
+    RS232 Configure    baud_rate=115200
+    Printer Set Option    ${RS232 BAUD RATE}[Option]    ${RS232 BAUD RATE}[115200]
+    Printer Reset
 
-    Print    ${SAMPLE TEXT SHORT}    interface=RS232
-    Wait Until Print Complete
-    Printout Should Match "${ARIAL16 SAMPLE SHORT}" Exactly
+    Printer Redirect Enable
+    RS232 Send And Expect Echo    ${SAMPLE TEXT}
 
 Test RS232 Baud Rate Error Recovery
     [Documentation]
     ...    Verify that the RS232 interface can recover after recieving a
     ...    transmission that uses the incorrect baud rate.
 
-    Set Printer Option "&{RS232 BAUD RATE}" To "9600"
-    Set Test System "RS232" Baud Rate To "4800"
+    RS232 Configure    baud_rate=38400
+    Printer Set Option    ${RS232 BAUD RATE}[Option]    ${RS232 BAUD RATE}[9600]
+    Printer Reset
 
-    Print    ${SAMPLE TEXT SHORT}    interface=RS232
-    Wait Until Print Complete
-    Printout Should Not Match "${ARIAL16 SAMPLE SHORT}"
-    Clear Printer Print Buffer
+    Printer Redirect Enable
+    RS232 Send    ${SAMPLE TEXT}
+    Sleep    1s
 
-    Set Test System "RS232" Baud Rate To "9600"
-    Print    ${SAMPLE TEXT SHORT}    interface=RS232
-    Wait Until Print Complete
-    Printout Should Match "${ARIAL16 SAMPLE SHORT}" Exactly
+    RS232 Configure    baud_rate=9600
+    RS232 Send And Expect Echo    ${SAMPLE TEXT}

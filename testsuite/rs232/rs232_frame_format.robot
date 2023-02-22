@@ -1,105 +1,102 @@
 *** Settings ***
 Documentation       Tests for RS232 data bits and parity.
 
-Library             printer.Printer
+Library             martel_printer_test_library.PrinterTestLibrary
+Library             martel_printer_test_library.PrinterDebugLibrary
 Resource            ../configuration_options.resource
-Resource            ../utils.resource
 Resource            ../samples.resource
 
 Suite Setup         Run Keywords
-...                     Set Printer Option "${Default Font}" To "Default"
-...                     Set Printer Option "&{RS232 Baud Rate}" To "Default"
-...                     Set Test System "RS232" Baud Rate To "9600"
+...                     RS232 Configure    baud_rate=9600    data_bits=8    parity=None    AND
+...                     Printer Set Option ${RS232 Baud Rate}[Option]    ${RS232 Baud Rate}[Default]    AND
+...                     Printer Reset
 Suite Teardown      Run Keywords
-...                     Set Printer Option "&{RS232 FRAME FORMAT}" To "Default"
-...                     Set Test System "RS232" Frame Format To "8 Bits None"
+...                     RS232 Configure    baud_rate=9600    data_bits=8    parity=None    AND
+...                     Printer Set Option    ${RS232 FRAME FORMAT}[Option]    ${RS232 FRAME FORMAT}[Default]    AND
+...                     Printer Reset
 
 Force Tags          frame_format
 
 
 *** Test Cases ***
 Test RS232 With 8 Bits No Parity
-    [Documentation]    Verify that the given RS232 frame format works correctly.
+    [Documentation]    Test the RS232 interface with 8 bits no parity.
 
-    Set Printer Option "&{RS232 FRAME FORMAT}" To "8 Bits None"
-    Set Test System "RS232" Frame Format To "8 Bits None"
+    RS232 Configure    data_bits=8    parity=None
+    Printer Set Option    ${RS232 FRAME FORMAT}[Option]    ${RS232 FRAME FORMAT}[8 Bits None]
+    Printer Reset
 
-    Print    ${SAMPLE TEXT SHORT}    interface=RS232
-    Wait Until Print Complete
-    Printout Should Match "${ARIAL16 SAMPLE SHORT}" Exactly
+    Printer Redirect Enable
+    RS232 Send And Expect Echo    ${SAMPLE TEXT}
 
 Test RS232 With 8 Bits Even Parity
-    [Documentation]    Verify that the given RS232 frame format works correctly.
+    [Documentation]    Test the RS232 interface with 8 bits even parity.
 
-    Set Printer Option "&{RS232 FRAME FORMAT}" To "8 Bits Even"
-    Set Test System "RS232" Frame Format To "8 Bits Even"
+    RS232 Configure    data_bits=8    parity=Even
+    Printer Set Option    ${RS232 FRAME FORMAT}[Option]    ${RS232 FRAME FORMAT}[8 Bits Even]
+    Printer Reset
 
-    Print    ${SAMPLE TEXT SHORT}    interface=RS232
-    Wait Until Print Complete
-    Printout Should Match "${ARIAL16 SAMPLE SHORT}" Exactly
+    Printer Redirect Enable
+    RS232 Send And Expect Echo    ${SAMPLE TEXT}
 
 Test RS232 With 8 Bits Odd Parity
-    [Documentation]    Verify that the given RS232 frame format works correctly.
+    [Documentation]    Test the RS232 interface with 8 bits odd parity.
 
-    Set Printer Option "&{RS232 FRAME FORMAT}" To "8 Bits Odd"
-    Set Test System "RS232" Frame Format To "8 Bits Odd"
+    RS232 Configure    data_bits=8    parity=Odd
+    Printer Set Option    ${RS232 FRAME FORMAT}[Option]    ${RS232 FRAME FORMAT}[8 Bits Odd]
+    Printer Reset
 
-    Print    ${SAMPLE TEXT SHORT}    interface=RS232
-    Wait Until Print Complete
-    Printout Should Match "${ARIAL16 SAMPLE SHORT}" Exactly
+    Printer Redirect Enable
+    RS232 Send And Expect Echo    ${SAMPLE TEXT}
 
 Test RS232 With 7 Bits Even Parity
-    [Documentation]    Verify that the given RS232 frame format works correctly.
+    [Documentation]    Test the RS232 interface with 7 bits even parity.
 
-    Set Printer Option "&{RS232 FRAME FORMAT}" To "7 Bits Even"
-    Set Test System "RS232" Frame Format To "7 Bits Even"
+    RS232 Configure    data_bits=7    parity=Even
+    Printer Set Option    ${RS232 FRAME FORMAT}[Option]    ${RS232 FRAME FORMAT}[7 Bits Even]
+    Printer Reset
 
-    Print    ${SAMPLE TEXT SHORT}    interface=RS232
-    Wait Until Print Complete
-    Printout Should Match "${ARIAL16 SAMPLE SHORT}" Exactly
+    Printer Redirect Enable
+    RS232 Send And Expect Echo    ${SAMPLE TEXT}
 
 Test RS232 With 7 Bits Odd Parity
-    [Documentation]    Verify that the given RS232 frame format works correctly.
+    [Documentation]    Test the RS232 interface with 7 bits odd parity.
 
-    Set Printer Option "&{RS232 FRAME FORMAT}" To "7 Bits Odd"
-    Set Test System "RS232" Frame Format To "7 Bits Odd"
+    RS232 Configure    data_bits=7    parity=Odd
+    Printer Set Option    ${RS232 FRAME FORMAT}[Option]    ${RS232 FRAME FORMAT}[7 Bits Odd]
+    Printer Reset
 
-    Print    ${SAMPLE TEXT SHORT}    interface=RS232
-    Wait Until Print Complete
-    Printout Should Match "${ARIAL16 SAMPLE SHORT}" Exactly
+    Printer Redirect Enable
+    RS232 Send And Expect Echo    ${SAMPLE TEXT}
 
 Test RS232 Parity Error Recovery
     [Documentation]
     ...    Verify that the RS232 interface can recover after recieving a
     ...    transmission that uses the incorrect parity.
 
-    Set Printer Option "&{RS232 FRAME FORMAT}" To "8 Bits Odd"
-    Set Test System "RS232" Frame Format To "8 Bits Even"
+    RS232 Configure    data_bits=8    parity=Even
+    Printer Set Option    ${RS232 FRAME FORMAT}[Option]    ${RS232 FRAME FORMAT}[8 Bits Odd]
+    Printer Reset
 
-    Print    ${SAMPLE TEXT SHORT}    interface=RS232
-    Wait Until Print Complete
-    Printout Should Not Match "${ARIAL16 SAMPLE SHORT}"
-    Clear Printer Print Buffer
+    Printer Redirect Enable
+    RS232 Send    ${SAMPLE TEXT}
+    Sleep    1s
 
-    Set Test System "RS232" Frame Format To "8 Bits Odd"
-    Print    ${SAMPLE TEXT SHORT}    interface=RS232
-    Wait Until Print Complete
-    Printout Should Match "${ARIAL16 SAMPLE SHORT}" Exactly
+    RS232 Configure    data_bits=8    parity=Odd
+    RS232 Send And Expect Echo    ${SAMPLE TEXT}
 
 Test RS232 Data Bit Error Recovery
     [Documentation]
     ...    Verify that the RS232 interface can recover after recieving a
     ...    transmission that uses the incorrect number of data bits.
 
-    Set Printer Option "&{RS232 FRAME FORMAT}" To "7 Bits Even"
-    Set Test System "RS232" Frame Format To "8 Bits Even"
+    RS232 Configure    data_bits=7    parity=Even
+    Printer Set Option    ${RS232 FRAME FORMAT}[Option]    ${RS232 FRAME FORMAT}[8 Bits Even]
+    Printer Reset
 
-    Print    ${SAMPLE TEXT SHORT}    interface=RS232
-    Wait Until Print Complete
-    Printout Should Not Match "${ARIAL16 SAMPLE SHORT}"
-    Clear Printer Print Buffer
+    Printer Redirect Enable
+    RS232 Send    ${SAMPLE TEXT}
+    Sleep    1s
 
-    Set Test System "RS232" Frame Format To "7 Bits Even"
-    Print    ${SAMPLE TEXT SHORT}    interface=RS232
-    Wait Until Print Complete
-    Printout Should Match "${ARIAL16 SAMPLE SHORT}" Exactly
+    RS232 Configure    data_bits=8    parity=Even
+    RS232 Send And Expect Echo    ${SAMPLE TEXT}

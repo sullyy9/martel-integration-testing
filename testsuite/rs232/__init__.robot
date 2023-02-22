@@ -1,13 +1,7 @@
 *** Settings ***
 Documentation       Tests for the RS232 communications interface.
 
-Library             printer.Printer
+Library             martel_printer_test_library.PrinterTestLibrary
+Library             martel_printer_test_library.PrinterDebugLibrary
 
-Suite Setup         Run Keywords
-...                     Open Printer "USB" Interface
-...                     Open Printer "RS232" Interface
-Suite Teardown      Run Keywords
-...                     Close Printer "RS232" Interface
-...                     Close Printer "USB" Interface
-
-Force Tags          rs232
+Test Tags          rs232
