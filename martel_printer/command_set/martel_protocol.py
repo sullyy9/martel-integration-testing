@@ -138,3 +138,30 @@ def italic_enable() -> bytes:
 def italic_disable() -> bytes:
     log.info(f'Sending disable italic command')
     return bytes([CC.ESC, ord('5')])
+
+def label_mode_enable() -> bytes:
+    log.info(f'Sending enable label mode command')
+    return bytes([CC.ESC, ord('L')])
+
+def label_advance() -> bytes:
+    log.info(f'Sending label advance command')
+    return bytes([CC.ESC, ord('f')])
+
+def feed_forward(dots: int) -> bytes:
+    if dots >= 24:
+        log.error(
+            f'Invalid dots value [dots={dots}] passed to feed forward command'
+        )
+
+    log.info(f'Sending feed forward command with parameters [dots={dots}]')
+    return bytes([CC.ESC, ord('J'), dots])
+
+def feed_backward(dots: int) -> bytes:
+    if dots >= 24:
+        log.error(
+            f'Invalid dots value [dots={dots}] passed to feed backwards command'
+        )
+
+    log.info(f'Sending feed backwards command with parameters [dots={dots}]')
+    return bytes([CC.ESC, ord('j'), dots])
+    
