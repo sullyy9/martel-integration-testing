@@ -1,4 +1,4 @@
-
+import time
 from datetime import timedelta
 from pathlib import Path
 from typing import Optional, Final
@@ -37,22 +37,41 @@ class LTPD245Analyser(PrintMechAnalyser):
         self._analyser.stop_capture()
 
     def await_capture_completion(self, timeout=timedelta(seconds=10)) -> None:
-        try:
-            self._analyser.process_capture(timeout)
-        except CaptureTimeout as exc:
-            raise MechCaptureTimeout(
-                'Print failed to complete within the given timeframe.'
-            ) from exc
+        if self._analyser.data_available_at_runtime():
+            # Process the data as it's available.
+            time_of_last_data = time.monotonic()
 
-        # Add the captured data to the Mech emulation. Create a new one if
-        # none exists.
-        records = self._analyser.get_data()
-        if not self._emulator:
-            self._emulator = PrintMechEmulator(records[0])
-            records = records[1:]
+            while (time.monotonic() - time_of_last_data) < 1:
+                if (records := self._analyser.take_avalable_data()) is None:
+                    continue
 
-        for record in np.nditer(records):
-            self._emulator.update(record)  # type: ignore
+                if not self._emulator:
+                    self._emulator = PrintMechEmulator(records[0])
+                    records = records[1:]
+
+                for record in np.nditer(records):
+                    self._emulator.update(record)  # type: ignore
+
+                time_of_last_data = time.monotonic()
+
+        else:
+            # Process the data only when it's all been captured.
+            try:
+                self._analyser.process_capture(timeout)
+            except CaptureTimeout as exc:
+                raise MechCaptureTimeout(
+                    'Print failed to complete within the given timeframe.'
+                ) from exc
+
+            # Add the captured data to the Mech emulation. Create a new one if
+            # none exists.
+            records = self._analyser.get_data()
+            if not self._emulator:
+                self._emulator = PrintMechEmulator(records[0])
+                records = records[1:]
+
+            for record in np.nditer(records):
+                self._emulator.update(record)  # type: ignore
 
     def process_available_data(self) -> None:
         '''

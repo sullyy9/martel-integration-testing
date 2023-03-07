@@ -93,6 +93,10 @@ class DigilentDDiscovery(SignalAnalyser):
         self._samples: list[NDArray[uint8]] = []
         self._timestamps: list[NDArray[float32]] = []
 
+        # Track the last received sample so that we can tell if a set of new
+        # samples are just repeats.
+        self._last_sample: Optional[int] = None
+
         # The counter embedded into the samples is only 8bits so a global
         # counter is required to track the global count.
         self._global_counter: int = 0
@@ -123,7 +127,6 @@ class DigilentDDiscovery(SignalAnalyser):
 
         # Set the trigger for an edge on any pin.
         self._digin.triggerSourceSet(DwfTriggerSource.DetectorDigitalIn)
-        self._digin.triggerSlopeSet(DwfTriggerSlope.Either)
 
         rising = 0
         falling = 0
@@ -278,6 +281,7 @@ class DigilentDDiscovery(SignalAnalyser):
 
         '''
         sample_count = self._digin.statusSamplesValid()
+
         if sample_count == 0:
             return None
 
@@ -311,11 +315,10 @@ class DigilentDDiscovery(SignalAnalyser):
 
         # Return None if this set doesn't include any new samples that
         # represent a change in state.
-        last_sample = self._samples[-1][-1] if len(self._samples) > 0 else None
-        non_repeated = samples[:-1] != samples[1:]
-        if (not np.any(non_repeated[:-1])) and samples[0] == last_sample:
+        if np.all(samples == self._last_sample):
             return None
 
+        self._last_sample = samples[-1]
         return (samples, timestamps)
 
     def _start_counter(self, channels: list[int], frequency: int) -> None:
