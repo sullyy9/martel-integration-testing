@@ -4,7 +4,6 @@ Documentation       Tests for RS232 data bits and parity.
 Library             martel_printer_test_library.PrinterTestLibrary
 Library             martel_printer_test_library.PrinterDebugLibrary
 Resource            ../configuration_options.resource
-Resource            ../samples.resource
 
 Suite Setup         Run Keywords
 ...                     RS232 Configure    baud_rate=9600    data_bits=8    parity=None    AND
@@ -16,6 +15,12 @@ Suite Teardown      Run Keywords
 ...                     Printer Reset
 
 Force Tags          frame_format
+
+
+*** Variables ***
+${SAMPLE TEXT}      Martel Instruments is a leading manufacturer and global
+...                 supplier of bespoke and innovative commercial printing
+...                 solutions.
 
 
 *** Test Cases ***

@@ -5,6 +5,7 @@ Library             OperatingSystem
 Library             martel_printer_test_library.PrinterTestLibrary
 Library             martel_printer_test_library.PrinterDebugLibrary
 Library             martel_printer_test_library.PrintoutCaptureLibrary
+Resource            samples.resource
 
 Suite Setup         Run Keywords
 ...                     Printer Set Option    ${Default Font}    1    AND
@@ -23,7 +24,7 @@ ${SAMPLE TEXT SHORT}    Martel Instruments is a leading manufacturer and
 ${DEFAULT FONT}         5
 ${FONT SLOT 1}          50
 
-&{FONT ID}              Arial8=1
+&{FONTS}              Arial8=1
 ...                     Arial8_ISO8859_7=2
 ...                     Arial9=3
 ...                     Arial12=4
@@ -41,7 +42,7 @@ ${FONT SLOT 1}          50
 ...                     Unicode16=253
 ...                     Unicode24=254
 
-${SAMPLE DIRECTORY}     ${OUTPUT DIR}/character_set_samples
+${SAMPLE DIRECTORY}     ${OUTPUT DIR}/${CHAR SET SAMPLES}
 
 
 *** Tasks ***
@@ -50,10 +51,10 @@ Generate Standard Samples
     ...    Generate digital character set sample printouts using no font styling.
     [Tags]    character_set_sample    styling_none
 
-    Set Local Variable    ${output directory}    ${SAMPLE DIRECTORY}/standard
+    Set Local Variable    ${output directory}    ${SAMPLE DIRECTORY}/${STANDARD SAMPLES}
     Create Directory    ${output directory}
 
-    FOR    ${FONT NAME}    ${FONT ID}    IN    &{FONT ID}
+    FOR    ${FONT NAME}    ${FONT ID}    IN    &{FONTS}
         Set Local Variable    ${sample file}    ${output directory}/${FONT NAME}.png
         ${sample exists} =    Run Keyword And Return Status    File Should Exist    ${sample file}
         IF    not ${sample exists}
@@ -66,10 +67,10 @@ Generate Bold Samples
     ...    Generate digital character set sample printouts using only bold font styling.
     [Tags]    character_set_sample    styling_bold
 
-    Set Local Variable    ${output directory}    ${SAMPLE DIRECTORY}/bold
+    Set Local Variable    ${output directory}    ${SAMPLE DIRECTORY}/${BOLD SAMPLES}
     Create Directory    ${output directory}
 
-    FOR    ${FONT NAME}    ${FONT ID}    IN    &{FONT ID}
+    FOR    ${FONT NAME}    ${FONT ID}    IN    &{FONTS}
         Set Local Variable    ${sample file}    ${output directory}/${FONT NAME}.png
         ${sample exists} =    Run Keyword And Return Status    File Should Exist    ${sample file}
         IF    not ${sample exists}
@@ -82,10 +83,10 @@ Generate Italic Samples
     ...    Generate digital character set sample printouts using only italic font styling.
     [Tags]    character_set_sample    styling_italic
 
-    Set Local Variable    ${output directory}    ${SAMPLE DIRECTORY}/italic
+    Set Local Variable    ${output directory}    ${SAMPLE DIRECTORY}/${ITALIC SAMPLES}
     Create Directory    ${output directory}
 
-    FOR    ${FONT NAME}    ${FONT ID}    IN    &{FONT ID}
+    FOR    ${FONT NAME}    ${FONT ID}    IN    &{FONTS}
         Set Local Variable    ${sample file}    ${output directory}/${FONT NAME}.png
         ${sample exists} =    Run Keyword And Return Status    File Should Exist    ${sample file}
         IF    not ${sample exists}
@@ -98,10 +99,10 @@ Generate Bold Italic Samples
     ...    Generate digital character set sample printouts using bold & italic font styling.
     [Tags]    character_set_sample    styling_italic    styling_bold
 
-    Set Local Variable    ${output directory}    ${SAMPLE DIRECTORY}/bold_italic
+    Set Local Variable    ${output directory}    ${SAMPLE DIRECTORY}/${BOLD & ITALIC SAMPLES}
     Create Directory    ${output directory}
 
-    FOR    ${FONT NAME}    ${FONT ID}    IN    &{FONT ID}
+    FOR    ${FONT NAME}    ${FONT ID}    IN    &{FONTS}
         Set Local Variable    ${sample file}    ${output directory}/${FONT NAME}.png
         ${sample exists} =    Run Keyword And Return Status    File Should Exist    ${sample file}
         IF    not ${sample exists}

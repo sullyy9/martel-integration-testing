@@ -1,5 +1,5 @@
 from datetime import timedelta
-from enum import Enum, StrEnum, auto
+from enum import Enum
 from pathlib import Path
 from typing import Optional
 
@@ -7,9 +7,11 @@ from robot.api import Failure, ContinuableFailure, SkipExecution
 from robot.api.deco import keyword, library
 from robot.libraries.BuiltIn import BuiltIn, register_run_keyword
 
-from martel_print_mech_analyser import PrintMechAnalyser, Printout
+import cv2 as cv
 
+from martel_print_mech_analyser import PrintMechAnalyser, Printout
 from . import setup
+from . import printout_matching as pm
 
 
 class TextSequence(Enum):
@@ -64,11 +66,7 @@ class PrintoutCaptureLibrary:
         if not self._mech_analyser:
             raise SkipExecution('Skipping tests requiring print analysis.')
 
-        printout = self._mech_analyser.get_printout()
-        if printout is None:
-            raise Failure('No recorded printout.')
-
-        printout.save(filepath)
+        self._mech_analyser.export_printout(filepath)
 
     @keyword('Clear Printout')
     def clear_printout(self) -> None:
@@ -77,6 +75,46 @@ class PrintoutCaptureLibrary:
 
         self._mech_analyser.clear()
 
+    @keyword('Printout Should Match Exactly')
+    def printout_should_match(self, sample: Printout) -> None:
+        printout: Printout = self.get_printout()
+
+        similarity: float = pm.printout_similarity(printout, sample)
+
+        if similarity != 1.0:
+            append_comparison_to_test_log(printout, sample)
+
+            percent = similarity * 100
+            raise Failure(
+                f'Printout only matches the sample by {percent:.4f}%')
+
 
 register_run_keyword(PrintoutCaptureLibrary,
-                     'Run Keywords And Capture Printout')
+                     'Run Keywords And Capture Printout',
+                     deprecation_warning=False)
+
+
+def append_comparison_to_test_log(printout: Printout, sample: Printout) -> None:
+    outdir: Path = Path(BuiltIn().get_variable_value("${OUTPUT DIR}"))
+
+    comparison_path: Path = Path(outdir, 'comparison')
+    comparison_path.mkdir(exist_ok=True)
+
+    filename = BuiltIn().get_variable_value("${TEST NAME}") + '.png'
+    filepath = Path(comparison_path, filename)
+
+    comparison = pm.create_comparison(
+        sample,
+        printout,
+        annotation_old='Sample',
+        annotation_new='Printout'
+    )
+
+    cv.imwrite(str(filepath.absolute()), comparison)
+
+    # Append the iamge to the Robot Framework test report.
+    BuiltIn().set_test_message("\n", append=True)
+    BuiltIn().set_test_message(
+        f"*HTML* <img src='{filepath.relative_to(outdir)}' width='100%'/>",
+        append=True
+    )
