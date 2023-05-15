@@ -1,6 +1,7 @@
 output/
 samples/
 .venv/
+test_scripts/
 .pytest_cache/
 __pycache__
 poetry.lock
