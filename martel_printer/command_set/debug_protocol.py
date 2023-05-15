@@ -38,6 +38,7 @@ class ConfigOption(IntEnum):
     BAUD_RATE_2 = 16
     HANDSHAKE_2 = 17
     PROFILE = 18
+    AUTO_POWER_ON = 19
 
     FONT_SLOT_DEFAULT_1 = 50
     FONT_SLOT_DEFAULT_2 = 51
@@ -56,6 +57,12 @@ class ConfigOption(IntEnum):
     FONT_SLOT_ENCODING_3 = 64
     FONT_SLOT_ENCODING_4 = 65
     FONT_SLOT_HP_ALTERNATIVE = 66
+
+    HARDWARE_NO_RS232 = 67
+    HARDWARE_NO_USB = 68
+    HARDWARE_NO_BT = 69
+    HARDWARE_NO_IR = 70
+    HARDWARE_NO_RTC = 71
 
 
 @unique
@@ -93,69 +100,58 @@ class SetChannel(IntEnum):
     PRINT_SELFTEST = 8
 
 
-log: Final[logging.Logger] = logging.getLogger('debug protocol')
+log: Final[logging.Logger] = logging.getLogger("debug protocol")
 
 
 def set_debug_mode(mode: DebugMode = DebugMode.AUTOTEST) -> bytes:
-    log.info(
-        f'Sending set debug mode command with parameters [mode={mode}]'
-    )
-    return bytes([CC.ESC, CC.NULL, CC.NULL, ord('D'), mode])
+    log.info(f"Sending set debug mode command with parameters [mode={mode}]")
+    return bytes([CC.ESC, CC.NULL, CC.NULL, ord("D"), mode])
 
 
 def set_option(option: ConfigOption | int, setting: int) -> bytes:
     log.info(
-        f'Sending enable debug command with parameters '
-        f'[option={option}, setting={setting}]'
+        f"Sending enable debug command with parameters "
+        f"[option={option}, setting={setting}]"
     )
-    return bytes([CC.ESC, CC.NULL, CC.NULL, ord('O'), option, setting])
+    return bytes([CC.ESC, CC.NULL, CC.NULL, ord("O"), option, setting])
 
 
 def measure_option(option: ConfigOption | int) -> bytes:
     channel = (MeasureChannel.CONFIG_OPTION_1 - 1) + option
 
-    log.info(
-        f'Sending measure option command with parameters [option={option}]'
-    )
+    log.info(f"Sending measure option command with parameters [option={option}]")
     return measure_channel(channel)
 
 
 def reset() -> bytes:
-    log.info(f'Sending reset command')
-    return bytes([CC.ESC, CC.NULL, CC.NULL, ord('@')])
+    log.info(f"Sending reset command")
+    return bytes([CC.ESC, CC.NULL, CC.NULL, ord("@")])
 
 
 def measure_channel(channel: MeasureChannel | int) -> bytes:
-    log.info(
-        f'Sending measure channel command with parameters '
-        f'[channel={channel}]'
-    )
-    return bytes([CC.ESC, CC.NULL, CC.NULL, ord('M'), channel])
+    log.info(f"Sending measure channel command with parameters " f"[channel={channel}]")
+    return bytes([CC.ESC, CC.NULL, CC.NULL, ord("M"), channel])
 
 
 def set_channel(channel: SetChannel | int) -> bytes:
-    log.info(
-        f'Sending set channel command with parameters [channel={channel}]'
-    )
-    return bytes([CC.ESC, CC.NULL, CC.NULL, ord('S'), channel])
+    log.info(f"Sending set channel command with parameters [channel={channel}]")
+    return bytes([CC.ESC, CC.NULL, CC.NULL, ord("S"), channel])
 
 
 def set_name(name: str) -> bytes:
-    if not name.endswith('\0'):
-        name += '\0'
+    if not name.endswith("\0"):
+        name += "\0"
 
-    log.info(
-        f'Sending set name command with parameters [name={name}]'
-    )
-    name_bytes: bytes = bytes(name.encode('ascii'))
-    return bytes([CC.ESC, CC.NULL, CC.NULL, ord('N')]) + name_bytes
+    log.info(f"Sending set name command with parameters [name={name}]")
+    name_bytes: bytes = bytes(name.encode("ascii"))
+    return bytes([CC.ESC, CC.NULL, CC.NULL, ord("N")]) + name_bytes
 
 
 def reset_timer() -> bytes:
-    log.info(f'Sending reset timer command')
-    return bytes([CC.ESC, CC.NULL, CC.NULL, ord('R')])
+    log.info(f"Sending reset timer command")
+    return bytes([CC.ESC, CC.NULL, CC.NULL, ord("R")])
 
 
 def print_timer() -> bytes:
-    log.info(f'Sending print timer command')
-    return bytes([CC.ESC, CC.NULL, CC.NULL, ord('T')])
+    log.info(f"Sending print timer command")
+    return bytes([CC.ESC, CC.NULL, CC.NULL, ord("T")])
