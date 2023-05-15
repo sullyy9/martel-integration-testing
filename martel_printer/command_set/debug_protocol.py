@@ -55,6 +55,7 @@ class ConfigOption(IntEnum):
     FONT_SLOT_ENCODING_2 = 63
     FONT_SLOT_ENCODING_3 = 64
     FONT_SLOT_ENCODING_4 = 65
+    FONT_SLOT_HP_ALTERNATIVE = 66
 
 
 @unique
