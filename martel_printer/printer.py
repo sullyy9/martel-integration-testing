@@ -1,60 +1,42 @@
-from datetime import timedelta, datetime
+import time
 import weakref
 import logging
 from weakref import finalize
 from enum import StrEnum, unique
 from typing import Optional, Final
 
-from .comms import SerialCommsInterface, Parity
+from .comms import CommsInterface
 from .command_set.common import ControlCode
 
 
 @unique
 class Encoding(StrEnum):
-    CP166 = 'cp166'  # UK keyboard layout
-    CP437 = 'cp437'
-    ASCII = 'ascii'
-    UTF8 = 'utf-8'
-    UTF16 = 'utf-16'
+    CP166 = "cp166"  # UK keyboard layout
+    CP437 = "cp437"
+    ASCII = "ascii"
+    UTF8 = "utf-8"
+    UTF16 = "utf-16"
 
 
 class Printer:
-    def __init__(self, comms_interface: SerialCommsInterface) -> None:
-        self.log: Final[logging.Logger] = logging.getLogger('printer')
+    def __init__(self, comms_interface: CommsInterface, name: str = "Printer") -> None:
+        self._log: Final[logging.Logger] = logging.getLogger(name)
+        self._log.info("Creating printer instance")
 
-        self._comms_interface: SerialCommsInterface = comms_interface
-        self._comms_interface.close()
+        self.comms: Final[CommsInterface] = comms_interface
 
-        self.disconnect: Final[finalize] = weakref.finalize(
-            self, self._cleanup)
+        self._destruct: Final[finalize] = weakref.finalize(self, self._cleanup)
 
-        self.log.info(
-            f"Creating instance with {type(self._comms_interface).__name__}"
-        )
+        if self.comms.is_open:
+            self.comms.close()
 
     def _cleanup(self) -> None:
-        self.log.info(f"Disconnecting")
-        self._comms_interface.disconnect()
-
-    def configure(self,
-                  baud_rate: Optional[int] = None,
-                  data_bits: Optional[int] = None,
-                  parity: Optional[Parity] = None,
-                  ) -> None:
-
-        self.log.info(
-            f'Configuring communication interface to {baud_rate} baud, '
-            f'{data_bits} bits, {parity} parity'
-        )
-        if baud_rate is not None:
-            self._comms_interface.set_baud_rate(baud_rate)
-        if data_bits is not None:
-            self._comms_interface.set_data_bits(data_bits)
-        if parity is not None:
-            self._comms_interface.set_parity(parity)
+        self._log.info("Disconnecting")
+        if self.comms.is_open:
+            self.comms.close()
 
     def send(self, data: bytes) -> None:
-        '''
+        """
         Send the given bytes to the printer.
 
         Parameter
@@ -63,39 +45,47 @@ class Printer:
             Data to send to the printer. Care should be taken to ensure the
             data is encoded in the correct format.
 
-        '''
-        self.log.info(f'Sending data [{data.hex(" ").upper()}]')
-        self._comms_interface.open()
-        self._comms_interface.send(data)
-        self._comms_interface.flush()
-        self._comms_interface.close()
+        """
+        self._log.info(f'Sending bytes [{data.hex(" ").upper()}]')
+        self.comms.open()
+        self.comms.write(data)
+        self.comms.flush()
+        self.comms.close()
 
-    def send_and_read_response(self,
-                               data: bytes,
-                               read_timeout: timedelta = timedelta(seconds=1),
-                               read_until: Optional[str] = None) -> str:
-        self._comms_interface.open()
-        self._comms_interface.send(data)
-        self._comms_interface.flush()
+    def send_and_get_response(
+        self,
+        data: bytes,
+        timeout: float = 1,
+        terminator: Optional[bytes] = None,
+    ) -> bytes:
+        self._log.info(f'Sending bytes [{data.hex(" ").upper()}]')
 
-        timeout_point = datetime.now() + read_timeout
+        self.comms.open()
+        self.comms.write(data)
+        self.comms.flush()
 
-        response: str = ''
-        while datetime.now() < timeout_point:
-            bytes = self._comms_interface.receive()
-            if bytes is not None:
-                response += bytes.decode('cp437')
+        timeout_point = time.monotonic() + timeout
 
-                if read_until and read_until in response:
-                    break
+        response: bytes = bytes()
+        while time.monotonic() < timeout_point:
+            bytes_in: Final[int] = self.comms.in_waiting
+            if bytes_in == 0:
+                continue
 
-        self._comms_interface.close()
+            response += self.comms.read(bytes_in)
+
+            if terminator and terminator in response:
+                break
+
+        self.comms.close()
+
+        self._log.info(f'Received bytes [{response.hex(" ").upper()}]')
         return response
 
-    def print(self, text: str, encoding: Encoding = Encoding.CP437) -> None:
-        '''
+    def print(self, text: str, encoding: Encoding | str = Encoding.CP437) -> None:
+        """
         Send the given text string to the printer. The text will be encoded
-        using the given format. 
+        using the given format.
 
         Parameter
         ---------
@@ -104,16 +94,16 @@ class Printer:
 
         encoding : Encoding
             Encoding format to use to encode the string. Care should be taken
-            to ensure this matches the encoding the printer is configured to. 
+            to ensure this matches the encoding the printer is configured to.
 
-        '''
-        self.log.info(f'Printing text [{text}] with [encoding={encoding}]')
+        """
+        self._log.info(f"Printing text [{text}] with {encoding} encoding")
         self.send(text.encode(encoding))
 
-    def println(self, text: str = '', encoding: Encoding = Encoding.CP437) -> None:
-        '''
+    def println(self, text: str = "", encoding: Encoding = Encoding.CP437) -> None:
+        """
         Send the given text string to the printer followed by a new line. The
-        text will be encoded using the given format. 
+        text will be encoded using the given format.
 
         Parameter
         ---------
@@ -122,9 +112,7 @@ class Printer:
 
         encoding : Encoding
             Encoding format to use to encode the string. Care should be taken
-            to ensure this matches the encoding the printer is configured to. 
+            to ensure this matches the encoding the printer is configured to.
 
-        '''
-        self.log.info(f'Printing text [{text}] with [encoding={encoding}]')
-        self.send(text.encode(encoding))
-        self.send(ControlCode.LF.to_bytes())
+        """
+        self.print(text + bytes(ControlCode.LF).decode(encoding))
