@@ -27,13 +27,11 @@ class Printer:
 
         self._destruct: Final[finalize] = weakref.finalize(self, self._cleanup)
 
-        if self.comms.is_open:
-            self.comms.close()
+        self._close_comms_if_open()
 
     def _cleanup(self) -> None:
         self._log.info("Disconnecting")
-        if self.comms.is_open:
-            self.comms.close()
+        self._close_comms_if_open()
 
     def send(self, data: bytes) -> None:
         """
@@ -47,10 +45,10 @@ class Printer:
 
         """
         self._log.info(f'Sending bytes [{data.hex(" ").upper()}]')
-        self.comms.open()
+        self._open_comms_if_closed()
         self.comms.write(data)
         self.comms.flush()
-        self.comms.close()
+        self._close_comms_if_open()
 
     def send_and_get_response(
         self,
@@ -60,7 +58,7 @@ class Printer:
     ) -> bytes:
         self._log.info(f'Sending bytes [{data.hex(" ").upper()}]')
 
-        self.comms.open()
+        self._open_comms_if_closed()
         self.comms.write(data)
         self.comms.flush()
 
@@ -77,7 +75,7 @@ class Printer:
             if terminator and terminator in response:
                 break
 
-        self.comms.close()
+        self._close_comms_if_open()
 
         self._log.info(f'Received bytes [{response.hex(" ").upper()}]')
         return response
@@ -116,3 +114,11 @@ class Printer:
 
         """
         self.print(text + bytes(ControlCode.LF).decode(encoding))
+
+    def _open_comms_if_closed(self) -> None:
+        if not self.comms.is_open:
+            self.comms.open()
+    
+    def _close_comms_if_open(self) -> None:
+        if self.comms.is_open:
+            self.comms.close()
