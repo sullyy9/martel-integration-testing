@@ -17,33 +17,31 @@ class Barcode(IntEnum):
     CODE_128 = 7
 
 
-log: Final[logging.Logger] = logging.getLogger('martel protocol')
+log: Final[logging.Logger] = logging.getLogger("martel protocol")
 
 
 def double_width_enable() -> bytes:
-    log.info('Sending enable double width command')
+    log.info("Sending enable double width command")
     return bytes([CC.SO])
 
 
 def double_width_disable() -> bytes:
-    log.info('Sending disable double width command')
+    log.info("Sending disable double width command")
     return bytes([CC.SI])
 
 
 def clear_print_buffer() -> bytes:
-    log.info('Sending print buffer command')
+    log.info("Sending print buffer command")
     return bytes([CC.CAN])
 
 
-def set_print_mode(font: int,
-                   double_height: bool = False,
-                   double_width: bool = False
-                   ) -> bytes:
-
+def set_print_mode(
+    font: int, double_height: bool = False, double_width: bool = False
+) -> bytes:
     if not 0 <= font <= 3:
         message = (
-            f'Invalid font value [font={font}] to print mode command. '
-            f'Value must be 0 <= and <= 3.'
+            f"Invalid font value [font={font}] to print mode command. "
+            f"Value must be 0 <= and <= 3."
         )
         log.error(message)
         raise ValueError(message)
@@ -53,115 +51,117 @@ def set_print_mode(font: int,
     word += 0x20 if double_width else 0
 
     log.info(
-        f'Sending print mode command with parameters [font={font}, '
-        f'double_height={double_height}, double_width={double_width}]'
+        f"Sending print mode command with parameters [font={font}, "
+        f"double_height={double_height}, double_width={double_width}]"
     )
-    return bytes([CC.ESC, ord('!'), word])
+    return bytes([CC.ESC, ord("!"), word])
 
 
 def set_underline_mode(enabled: bool) -> bytes:
     log.info(
-        f'Sending set underline mode command with parameters '
-        f'[enabled={enabled}]'
+        f"Sending set underline mode command with parameters " f"[enabled={enabled}]"
     )
     enable_byte = 1 if enabled else 0
-    return bytes([CC.ESC, ord('_'), enable_byte])
+    return bytes([CC.ESC, ord("_"), enable_byte])
 
 
 def set_print_defaults() -> bytes:
-    log.info(f'Sending set print defaults command')
-    return bytes([CC.ESC, ord('@')])
+    log.info("Sending set print defaults command")
+    return bytes([CC.ESC, ord("@")])
 
 
 def bold_enable() -> bytes:
-    log.info(f'Sending enable bold command')
-    return bytes([CC.ESC, ord('G')])
+    log.info("Sending enable bold command")
+    return bytes([CC.ESC, ord("G")])
 
 
 def bold_disable() -> bytes:
-    log.info(f'Sending disable bold command')
-    return bytes([CC.ESC, ord('H')])
+    log.info("Sending disable bold command")
+    return bytes([CC.ESC, ord("H")])
 
 
 def set_encoding(font: int) -> bytes:
     if not 1 <= font <= 8:
         message = (
-            f'Invalid font value [font={font}] to set encoding command. '
-            f'Value must be 1 <= and <= 8.'
+            f"Invalid font value [font={font}] to set encoding command. "
+            f"Value must be 1 <= and <= 8."
         )
         log.error(message)
         raise ValueError(message)
 
-    log.info(f'Sending set encoding command with parameters [font={font}]')
-    return bytes([CC.ESC, ord('e'), font])
+    log.info(f"Sending set encoding command with parameters [font={font}]")
+    return bytes([CC.ESC, ord("e"), font])
 
 
 def print_character(code_point: int) -> bytes:
     log.info(
-        f'Sending print character command with parameters '
-        f'[code_point={code_point}]'
+        f"Sending print character command with parameters " f"[code_point={code_point}]"
     )
-    return bytes([CC.ESC, ord('6'), code_point])
+    return bytes([CC.ESC, ord("6"), code_point])
 
 
 def set_barcode_magnification(magnification: int) -> bytes:
     if not 2 <= magnification <= 4:
         message = (
-            f'Invalid font value [magnification={magnification}] to set '
-            f'encoding command. Value must be 2 <= and <= 4.'
+            f"Invalid font value [magnification={magnification}] to set "
+            f"encoding command. Value must be 2 <= and <= 4."
         )
         log.error(message)
         raise ValueError(message)
 
     log.info(
-        f'Sending set barcode magnification command with parameters '
-        f'[magnification={magnification}].'
+        f"Sending set barcode magnification command with parameters "
+        f"[magnification={magnification}]."
     )
 
-    return bytes([CC.GS, ord('w'), magnification])
+    return bytes([CC.GS, ord("w"), magnification])
 
 
 def print_barcode(barcode: Barcode, data: str) -> bytes:
     log.info(
-        f'Sending print barcode command with parameters '
-        f'[barcode={barcode}, data={data}].'
+        f"Sending print barcode command with parameters "
+        f"[barcode={barcode}, data={data}]."
     )
 
-    return bytes([CC.GS, ord('k'), barcode]) + data.encode('ascii')
+    return bytes([CC.GS, ord("k"), barcode]) + data.encode("ascii")
 
 
 def italic_enable() -> bytes:
-    log.info(f'Sending enable italic command')
-    return bytes([CC.ESC, ord('4')])
+    log.info("Sending enable italic command")
+    return bytes([CC.ESC, ord("4")])
 
 
 def italic_disable() -> bytes:
-    log.info(f'Sending disable italic command')
-    return bytes([CC.ESC, ord('5')])
+    log.info("Sending disable italic command")
+    return bytes([CC.ESC, ord("5")])
+
 
 def label_mode_enable() -> bytes:
-    log.info(f'Sending enable label mode command')
-    return bytes([CC.ESC, ord('L')])
+    log.info("Sending enable label mode command")
+    return bytes([CC.ESC, ord("L")])
+
 
 def label_advance() -> bytes:
-    log.info(f'Sending label advance command')
-    return bytes([CC.ESC, ord('f')])
+    log.info("Sending label advance command")
+    return bytes([CC.ESC, ord("f")])
+
 
 def feed_forward(dots: int) -> bytes:
     if dots >= 24:
-        log.error(
-            f'Invalid dots value [dots={dots}] passed to feed forward command'
-        )
+        log.error(f"Invalid dots value [dots={dots}] passed to feed forward command")
 
-    log.info(f'Sending feed forward command with parameters [dots={dots}]')
-    return bytes([CC.ESC, ord('J'), dots])
+    log.info(f"Sending feed forward command with parameters [dots={dots}]")
+    return bytes([CC.ESC, ord("J"), dots])
+
 
 def feed_backward(dots: int) -> bytes:
     if dots >= 24:
-        log.error(
-            f'Invalid dots value [dots={dots}] passed to feed backwards command'
-        )
+        log.error(f"Invalid dots value [dots={dots}] passed to feed backwards command")
 
-    log.info(f'Sending feed backwards command with parameters [dots={dots}]')
-    return bytes([CC.ESC, ord('j'), dots])
-    
+    log.info(f"Sending feed backwards command with parameters [dots={dots}]")
+    return bytes([CC.ESC, ord("j"), dots])
+
+
+def get_status() -> bytes:
+    log.info("Sending get status command")
+    return bytes([CC.ESC, ord("v")])
