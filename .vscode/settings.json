@@ -15,5 +15,14 @@
     "robot.variables": {
         "OUTPUT DIR": "${workspaceFolder}/output",
         "SAMPLE DIR": "${workspaceFolder}/samples"
-    }
+    },
+
+    "python.formatting.provider": "black",
+    "python.analysis.packageIndexDepths": [
+
+        {
+            "name": "simplepyble",
+            "depth": 3
+        },
+    ]
 }
