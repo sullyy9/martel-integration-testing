@@ -15,10 +15,10 @@
             "command": "poetry",
             "args": [
                 "run", "robot",
-                "--outputdir", "${workspaceFolder}/output",
+                "--outputdir", "${workspaceFolder}/output_testsuite_integration",
                 "--pythonpath", "${workspaceFolder}/martel_printer_test_library",
                 "--variable", "SAMPLE_DIR:${workspaceFolder}/samples",
-                "${workspaceFolder}/testsuite"
+                "${workspaceFolder}/testsuite_integration"
             ],
             "problemMatcher": []
         },
@@ -40,9 +40,9 @@
             "command": "poetry",
             "args": [
                 "run", "robot",
-                "--outputdir", "${workspaceFolder}/output",
+                "--outputdir", "${workspaceFolder}/output_testsuite_samples",
                 "--pythonpath", "${workspaceFolder}/martel_printer_test_lib",
-                "${workspaceFolder}/sample_generation"
+                "${workspaceFolder}/testsuite_samples"
             ],
             "problemMatcher": []
         },
