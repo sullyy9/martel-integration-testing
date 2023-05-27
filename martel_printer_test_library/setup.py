@@ -1,18 +1,18 @@
+import serial.tools.list_ports
+from serial import Serial
 from enum import Enum, auto, unique
 from typing import Final, Optional
 
-import serial.tools.list_ports
 
 from robot.libraries import Dialogs
 
-from martel_printer.comms import SerialCommsInterface
-from martel_printer import USBAutoDetect, USBPort, RS232Adapter, IrDAAdapter
+from martel_printer.comms import CommsInterface
 
 from martel_print_mech_analyser import PrintMechAnalyser
 from martel_print_mech_analyser import LTPD245Analyser
 from martel_print_mech_analyser.signal_analyser import DigilentDDiscovery
 
-from .tcu import RS232TCUComms, IrDATCUComms
+from martel_tcu import TCU, RS232ThroughTCU, IrDAThroughTCU, BluetoothThroughTCU
 
 
 @unique
@@ -23,85 +23,87 @@ class CommsProtocol(Enum):
     Bluetooth = auto()
 
 
-PROTOCOL_INTERFACES: Final[dict[CommsProtocol, list[type[SerialCommsInterface]]]] = {
-    CommsProtocol.USB: [USBAutoDetect, USBPort],
-    CommsProtocol.RS232: [RS232Adapter, RS232TCUComms],
-    CommsProtocol.IrDA: [IrDAAdapter, IrDATCUComms],
-    CommsProtocol.Bluetooth: [],
+INTERFACES: Final = {
+    CommsProtocol.USB: [Serial],
+    CommsProtocol.RS232: [Serial, RS232ThroughTCU],
+    CommsProtocol.IrDA: [Serial, IrDAThroughTCU],
+    CommsProtocol.Bluetooth: [BluetoothThroughTCU],
 }
 
-PRINT_MECH_ANALYSERS: Final[list[type[PrintMechAnalyser]]] = [LTPD245Analyser]
+PRINT_MECH_ANALYSERS: Final = [LTPD245Analyser]
 
 
 def from_user_get_comms_interface(
-    protocol: CommsProtocol,
-    allow_skip: bool = True
-) -> Optional[SerialCommsInterface]:
+    protocol: CommsProtocol, allow_skip: bool = True
+) -> Optional[CommsInterface]:
+    skip_string: str = "Skip tests requiring this protocol"
 
-    skip_string: str = 'Skip tests requiring this protocol'
-    interfaces = PROTOCOL_INTERFACES[protocol]
+    options: list[str] = [i.__name__ for i in INTERFACES[protocol]]
+
+    # Replace the serial option with COM ports.
+    com_ports = serial.tools.list_ports.comports()
+    if Serial.__name__ in options:
+        options.remove(Serial.__name__)
+        for port in com_ports:
+            options.append(str(port))
+
     if allow_skip:
-        try:
-            selected_interface: str = Dialogs.get_selection_from_user(
-                f'Select a {protocol.name} interface:',
-                *[i.__name__ for i in interfaces],
-                skip_string
-            )
-        except RuntimeError:
-            selected_interface = skip_string
+        options += skip_string
 
-    else:
+    try:
         selected_interface: str = Dialogs.get_selection_from_user(
-            f'Select a {protocol.name} interface:',
-            *[i.__name__ for i in interfaces]
+            f"Select a {protocol.name} interface:", *options
         )
-    if selected_interface == skip_string:
+    except RuntimeError:
         return None
 
-    interface = next(i for i in interfaces if i.__name__ == selected_interface)
+    # If a COM port was selected.
+    try:
+        port = next(p.name for p in com_ports if str(p) == selected_interface)
+        return Serial(port)
+    except StopIteration:
+        pass
 
-    if interface == type[USBAutoDetect]:
-        return interface()
-
-    ports = serial.tools.list_ports.comports()
-    selected_port = Dialogs.get_selection_from_user(
-        'Select a serial port for the interface',
-        *ports
+    interface = next(
+        i for i in INTERFACES[protocol] if i.__name__ == selected_interface
     )
-    interface_port = next(p.name for p in ports if str(p) == selected_port)
 
-    if interface == USBPort:
-        return USBPort(interface_port)
+    # Get the com port for the interface
+    selected_port = Dialogs.get_selection_from_user(
+        "Select a serial port for the interface", *com_ports
+    )
+    interface_port = next(p.name for p in com_ports if str(p) == selected_port)
 
-    elif interface == RS232Adapter:
-        return RS232Adapter(interface_port)
-    elif interface == RS232TCUComms:
-        return RS232TCUComms(interface_port)
+    serial_port = Serial(interface_port)
 
-    elif interface == IrDAAdapter:
-        return IrDAAdapter(interface_port)
-    elif interface == IrDATCUComms:
-        return IrDATCUComms(interface_port)
+    if interface == RS232ThroughTCU:
+        return RS232ThroughTCU(TCU(serial_port))
+
+    elif interface == IrDAThroughTCU:
+        return IrDAThroughTCU(TCU(serial_port))
+
+    elif interface == BluetoothThroughTCU:
+        return BluetoothThroughTCU(TCU(serial_port))
 
     else:
         raise NotImplementedError
 
 
 def from_user_get_mech_analyser(allow_skip: bool = True) -> Optional[PrintMechAnalyser]:
-    skip_string: str = 'Skip tests requiring print analysis'
+    skip_string: str = "Skip tests requiring print analysis"
 
     if allow_skip:
         try:
             selection: str = Dialogs.get_selection_from_user(
-                f'Select a print mech analyser:',
+                f"Select a print mech analyser:",
                 *[i.__name__ for i in PRINT_MECH_ANALYSERS],
-                skip_string
+                skip_string,
             )
         except RuntimeError:
             selection = skip_string
     else:
         selection: str = Dialogs.get_selection_from_user(
-            f'Select a print mech analyser:',
+            f"Select a print mech analyser:",
             *[i.__name__ for i in PRINT_MECH_ANALYSERS],
         )
 

@@ -142,7 +142,12 @@ class PrinterTestLibrary:
                 f'Skipping tests requiring {interface} interface.'
             )
 
-        comm_interface.configure(baud_rate, data_bits, parity)
+        if baud_rate is not None:
+            comm_interface.comms.baudrate = baud_rate
+        if data_bits is not None:
+            comm_interface.comms.bytesize = data_bits
+        if parity is not None:
+            comm_interface.comms.parity = parity
 
     ############################################################################
 
@@ -325,10 +330,10 @@ class PrinterTestLibrary:
                 f'Skipping tests requiring {interface} interface.'
             )
 
-        response = comm_interface.send_and_read_response(
+        response = comm_interface.send_and_get_response(
             data.encode('ascii'),
-            read_timeout=timedelta(seconds=5),
-            read_until=data
+            timeout=5,
+            terminator=data.encode('ascii')
         )
         if response != data:
             raise Failure(
