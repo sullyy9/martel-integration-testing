@@ -23,6 +23,18 @@
             "problemMatcher": []
         },
         {
+            "label": "Run PCB Test Suite",
+            "type": "shell",
+            "command": "poetry",
+            "args": [
+                "run", "robot",
+                "--outputdir", "${workspaceFolder}/output_testsuite_pcb",
+                "--pythonpath", "${workspaceFolder}/martel_test_library",
+                "${workspaceFolder}/testsuite_pcb"
+            ],
+            "problemMatcher": []
+        },
+        {
             "label": "Generate Samples",
             "type": "shell",
             "command": "poetry",
