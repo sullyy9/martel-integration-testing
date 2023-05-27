@@ -48,13 +48,16 @@ def from_user_get_comms_interface(
             options.append(str(port))
 
     if allow_skip:
-        options += skip_string
+        options.append(skip_string)
 
     try:
         selected_interface: str = Dialogs.get_selection_from_user(
             f"Select a {protocol.name} interface:", *options
         )
     except RuntimeError:
+        return None
+    
+    if selected_interface == skip_string:
         return None
 
     # If a COM port was selected.
