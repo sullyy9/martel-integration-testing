@@ -26,7 +26,7 @@ class TextSequence(Enum):
                 for i in range(0, 256):
                     data += martel.print_character(i)
                     if i % 15 == 0:
-                        data += bytes([ord('\n')])
+                        data += bytes([ord("\n")])
                 return data
 
 
@@ -41,15 +41,15 @@ class Command(Enum):
         return self.value(*args)
 
 
-@library(scope='GLOBAL')
+@library(scope="GLOBAL")
 class PrinterTestLibrary:
-    '''
+    """
 
     TODO
     ----
         When Robot Frameworks allows mixing embedded and normal aruments,
         replace the variations of each keyword.
-    '''
+    """
 
     def __init__(self) -> None:
         self._outdir: Optional[Path]
@@ -57,16 +57,15 @@ class PrinterTestLibrary:
         self._secure_comms: Printer
         self._comms: dict[CommsProtocol, Optional[Printer]]
 
-    @keyword('Setup Printer Test Library')
+    @keyword("Setup Printer Test Library")
     def setup(self) -> None:
-        usb = setup.from_user_get_comms_interface(
-            CommsProtocol.USB, allow_skip=False)
+        usb = setup.from_user_get_comms_interface(CommsProtocol.USB, allow_skip=False)
         rs = setup.from_user_get_comms_interface(CommsProtocol.RS232)
         ir = setup.from_user_get_comms_interface(CommsProtocol.IrDA)
         bt = setup.from_user_get_comms_interface(CommsProtocol.Bluetooth)
 
         if not usb:
-            raise FatalError('')
+            raise FatalError("")
 
         # Use USB as a secure comm interface for sending commands.
         self._secure_comms = Printer(usb)
@@ -79,40 +78,49 @@ class PrinterTestLibrary:
 
     ############################################################################
 
-    @keyword('USB Configure')
-    def usb_configure(self,
-                      baud_rate: Optional[int] = None,
-                      data_bits: Optional[int] = None,
-                      parity: Optional[Parity] = None) -> None:
+    @keyword("USB Configure")
+    def usb_configure(
+        self,
+        baud_rate: Optional[int] = None,
+        data_bits: Optional[int] = None,
+        parity: Optional[Parity] = None,
+    ) -> None:
         self.configure_comms(CommsProtocol.USB, baud_rate, data_bits, parity)
 
-    @keyword('RS232 Configure')
-    def rs232_configure(self,
-                        baud_rate: Optional[int] = None,
-                        data_bits: Optional[int] = None,
-                        parity: Optional[Parity] = None) -> None:
+    @keyword("RS232 Configure")
+    def rs232_configure(
+        self,
+        baud_rate: Optional[int] = None,
+        data_bits: Optional[int] = None,
+        parity: Optional[Parity] = None,
+    ) -> None:
         self.configure_comms(CommsProtocol.RS232, baud_rate, data_bits, parity)
 
-    @keyword('IrDA Configure')
-    def irda_configure(self,
-                       baud_rate: Optional[int] = None,
-                       data_bits: Optional[int] = None,
-                       parity: Optional[Parity] = None) -> None:
+    @keyword("IrDA Configure")
+    def irda_configure(
+        self,
+        baud_rate: Optional[int] = None,
+        data_bits: Optional[int] = None,
+        parity: Optional[Parity] = None,
+    ) -> None:
         self.configure_comms(CommsProtocol.IrDA, baud_rate, data_bits, parity)
 
-    @keyword('Bluetooth Configure')
-    def bt_configure(self,
-                     baud_rate: Optional[int] = None,
-                     data_bits: Optional[int] = None,
-                     parity: Optional[Parity] = None) -> None:
-        self.configure_comms(CommsProtocol.Bluetooth,
-                             baud_rate, data_bits, parity)
+    @keyword("Bluetooth Configure")
+    def bt_configure(
+        self,
+        baud_rate: Optional[int] = None,
+        data_bits: Optional[int] = None,
+        parity: Optional[Parity] = None,
+    ) -> None:
+        self.configure_comms(CommsProtocol.Bluetooth, baud_rate, data_bits, parity)
 
-    def configure_comms(self,
-                        interface: CommsProtocol,
-                        baud_rate: Optional[int] = None,
-                        data_bits: Optional[int] = None,
-                        parity: Optional[Parity] = None) -> None:
+    def configure_comms(
+        self,
+        interface: CommsProtocol,
+        baud_rate: Optional[int] = None,
+        data_bits: Optional[int] = None,
+        parity: Optional[Parity] = None,
+    ) -> None:
         """
         Configure the given interface.
 
@@ -138,9 +146,7 @@ class PrinterTestLibrary:
         """
         comm_interface = self._comms[interface]
         if not comm_interface:
-            raise SkipExecution(
-                f'Skipping tests requiring {interface} interface.'
-            )
+            raise SkipExecution(f"Skipping tests requiring {interface} interface.")
 
         if baud_rate is not None:
             comm_interface.comms.baudrate = baud_rate
@@ -151,26 +157,25 @@ class PrinterTestLibrary:
 
     ############################################################################
 
-    @keyword('USB Print')
+    @keyword("USB Print")
     def usb_print(self, text: str, encoding: Encoding = Encoding.ASCII) -> None:
         self.print(CommsProtocol.USB, text, encoding)
 
-    @keyword('RS232 Print')
+    @keyword("RS232 Print")
     def rs232_print(self, text: str, encoding: Encoding = Encoding.ASCII) -> None:
         self.print(CommsProtocol.RS232, text, encoding)
 
-    @keyword('IrDA Print')
+    @keyword("IrDA Print")
     def irda_print(self, text: str, encoding: Encoding = Encoding.ASCII) -> None:
         self.print(CommsProtocol.IrDA, text, encoding)
 
-    @keyword('Bluetooth Print')
+    @keyword("Bluetooth Print")
     def bt_print(self, text: str, encoding: Encoding = Encoding.ASCII) -> None:
         self.print(CommsProtocol.Bluetooth, text, encoding)
 
-    def print(self,
-              interface: CommsProtocol,
-              text: str,
-              encoding: Encoding = Encoding.ASCII) -> None:
+    def print(
+        self, interface: CommsProtocol, text: str, encoding: Encoding = Encoding.ASCII
+    ) -> None:
         """
         Print a string using the given comms interface and capture the printout
         using the selected mech analyzer.
@@ -192,34 +197,42 @@ class PrinterTestLibrary:
         """
         comm_interface = self._comms[interface]
         if not comm_interface:
-            raise SkipExecution(
-                f'Skipping tests requiring {interface} interface.'
-            )
+            raise SkipExecution(f"Skipping tests requiring {interface} interface.")
 
         comm_interface.print(text, encoding=encoding)
 
     ############################################################################
 
-    @keyword('USB Print Sequence')
-    def usb_print_sequence(self, text: TextSequence, encoding: Encoding = Encoding.ASCII) -> None:
+    @keyword("USB Print Sequence")
+    def usb_print_sequence(
+        self, text: TextSequence, encoding: Encoding = Encoding.ASCII
+    ) -> None:
         self.print_sequence(CommsProtocol.USB, text, encoding)
 
-    @keyword('RS232 Print Sequence')
-    def rs232_print_sequence(self, text: TextSequence, encoding: Encoding = Encoding.ASCII) -> None:
+    @keyword("RS232 Print Sequence")
+    def rs232_print_sequence(
+        self, text: TextSequence, encoding: Encoding = Encoding.ASCII
+    ) -> None:
         self.print_sequence(CommsProtocol.RS232, text, encoding)
 
-    @keyword('IrDA Print Sequence')
-    def irda_print_sequence(self, text: TextSequence, encoding: Encoding = Encoding.ASCII) -> None:
+    @keyword("IrDA Print Sequence")
+    def irda_print_sequence(
+        self, text: TextSequence, encoding: Encoding = Encoding.ASCII
+    ) -> None:
         self.print_sequence(CommsProtocol.IrDA, text, encoding)
 
-    @keyword('Bluetooth Print Sequence')
-    def bt_print_sequence(self, text: TextSequence, encoding: Encoding = Encoding.ASCII) -> None:
+    @keyword("Bluetooth Print Sequence")
+    def bt_print_sequence(
+        self, text: TextSequence, encoding: Encoding = Encoding.ASCII
+    ) -> None:
         self.print_sequence(CommsProtocol.Bluetooth, text, encoding)
 
-    def print_sequence(self,
-                       interface: CommsProtocol,
-                       text: TextSequence,
-                       encoding: Encoding = Encoding.ASCII) -> None:
+    def print_sequence(
+        self,
+        interface: CommsProtocol,
+        text: TextSequence,
+        encoding: Encoding = Encoding.ASCII,
+    ) -> None:
         """
         Print a string using the given comms interface and capture the printout
         using the selected mech analyzer.
@@ -241,107 +254,95 @@ class PrinterTestLibrary:
         """
         comm_interface = self._comms[interface]
         if not comm_interface:
-            raise SkipExecution(
-                f'Skipping tests requiring {interface} interface.'
-            )
+            raise SkipExecution(f"Skipping tests requiring {interface} interface.")
 
         comm_interface.send(text.get_sequence())
         comm_interface.println()
 
     ############################################################################
 
-    @keyword('USB Send')
+    @keyword("USB Send")
     def usb_send(self, data: bytes) -> None:
         self.send(CommsProtocol.USB, data)
 
-    @keyword('RS232 Send')
+    @keyword("RS232 Send")
     def rs232_send(self, data: bytes) -> None:
         self.send(CommsProtocol.RS232, data)
 
-    @keyword('IrDA Send')
+    @keyword("IrDA Send")
     def irda_send(self, data: bytes) -> None:
         self.send(CommsProtocol.IrDA, data)
 
-    @keyword('Bluetooth Send')
+    @keyword("Bluetooth Send")
     def bt_send(self, data: bytes) -> None:
         self.send(CommsProtocol.Bluetooth, data)
 
     def send(self, interface: CommsProtocol, data: bytes) -> None:
-
         comm_interface = self._comms[interface]
         if not comm_interface:
-            raise SkipExecution(
-                f'Skipping tests requiring {interface} interface.'
-            )
+            raise SkipExecution(f"Skipping tests requiring {interface} interface.")
 
         comm_interface.send(data)
 
     ############################################################################
 
-    @keyword('USB Send Command')
+    @keyword("USB Send Command")
     def usb_send_command(self, command: Command) -> None:
         self.send_command(CommsProtocol.USB, command)
 
-    @keyword('RS232 Send Command')
+    @keyword("RS232 Send Command")
     def rs232_send_command(self, command: Command) -> None:
         self.send_command(CommsProtocol.RS232, command)
 
-    @keyword('IrDA Send Command')
+    @keyword("IrDA Send Command")
     def irda_send_command(self, command: Command) -> None:
         self.send_command(CommsProtocol.IrDA, command)
 
-    @keyword('Bluetooth Send Command')
+    @keyword("Bluetooth Send Command")
     def bt_send_command(self, command: Command) -> None:
         self.send_command(CommsProtocol.Bluetooth, command)
 
     def send_command(self, interface: CommsProtocol, command: Command) -> None:
-
         comm_interface = self._comms[interface]
         if not comm_interface:
-            raise SkipExecution(
-                f'Skipping tests requiring {interface} interface.'
-            )
+            raise SkipExecution(f"Skipping tests requiring {interface} interface.")
 
         comm_interface.send(command())
 
     ############################################################################
 
-    @keyword('USB Send And Expect Echo')
+    @keyword("USB Send And Expect Echo")
     def usb_send_and_expect_echo(self, data: str) -> None:
         self.send_and_expect_echo(CommsProtocol.USB, data)
 
-    @keyword('RS232 Send And Expect Echo')
+    @keyword("RS232 Send And Expect Echo")
     def rs232_send_and_expect_echo(self, data: str) -> None:
         self.send_and_expect_echo(CommsProtocol.RS232, data)
 
-    @keyword('IrDA Send And Expect Echo')
+    @keyword("IrDA Send And Expect Echo")
     def irda_send_and_expect_echo(self, data: str) -> None:
         self.send_and_expect_echo(CommsProtocol.IrDA, data)
 
-    @keyword('Bluetooth Send And Expect Echo')
+    @keyword("Bluetooth Send And Expect Echo")
     def bt_send_and_expect_echo(self, data: str) -> None:
         self.send_and_expect_echo(CommsProtocol.Bluetooth, data)
 
     def send_and_expect_echo(self, interface: CommsProtocol, data: str) -> None:
-
         comm_interface = self._comms[interface]
         if not comm_interface:
-            raise SkipExecution(
-                f'Skipping tests requiring {interface} interface.'
-            )
+            raise SkipExecution(f"Skipping tests requiring {interface} interface.")
 
         response = comm_interface.send_and_get_response(
-            data.encode('ascii'),
-            timeout=5,
-            terminator=data.encode('ascii')
+            data.encode("ascii"), timeout=5, terminator=data.encode("ascii")
         )
         if response != data:
             raise Failure(
-                f'expected: {data} {len(data)} response: {response} {len(response)}')
+                f"expected: {data} {len(data)} response: {response} {len(response)}"
+            )
 
     ############################################################################
 
-    @keyword('Printer Clear Print Buffer')
+    @keyword("Printer Clear Print Buffer")
     def clear_print_buffer(self) -> None:
         self._secure_comms.send(martel.clear_print_buffer())
 
