@@ -1,4 +1,5 @@
 output/
+output_testsuite_pcb/
 samples/
 .venv/
 test_scripts/
