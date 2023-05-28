@@ -1,0 +1,22 @@
+Screen {
+    layout: grid;
+    grid-size: 2 4;
+    grid-columns: 2fr 1fr;
+    grid-rows: 1fr 2fr 5fr 1fr;
+}
+
+#tabs {
+    column-span: 2;
+}
+
+#tag_selection {
+    row-span: 2;
+}
+
+Terminal {
+    row-span: 2;
+}
+
+TestControls {
+    align: right bottom;
+}

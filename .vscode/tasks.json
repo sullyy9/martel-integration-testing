@@ -35,6 +35,18 @@
             "problemMatcher": []
         },
         {
+            "label": "Run Test Runner",
+            "type": "shell",
+            "command": "poetry",
+            "args": [
+                "run",
+                "python",
+                "-m",
+                "martel_printer_test_library.test_runner"
+            ],
+            "problemMatcher": []
+        },
+        {
             "label": "Generate Samples",
             "type": "shell",
             "command": "poetry",
