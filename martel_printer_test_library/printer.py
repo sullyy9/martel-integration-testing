@@ -1,4 +1,3 @@
-from datetime import timedelta
 from enum import Enum, auto
 from pathlib import Path
 from typing import Optional
@@ -14,6 +13,7 @@ from martel_printer.command_set import martel_protocol as martel
 
 from . import setup
 from .setup import CommsProtocol
+from .environment import TestEnvironment, Skip
 
 
 class TextSequence(Enum):
@@ -51,30 +51,35 @@ class PrinterTestLibrary:
         replace the variations of each keyword.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, env: TestEnvironment = TestEnvironment()) -> None:
         self._outdir: Optional[Path]
 
-        self._secure_comms: Printer
-        self._comms: dict[CommsProtocol, Optional[Printer]]
+        self._secure_comms: Optional[Printer] = None
+        self._comms: dict[CommsProtocol, Optional[Printer]] = {
+            CommsProtocol.USB: None,
+            CommsProtocol.RS232: None,
+            CommsProtocol.IrDA: None,
+            CommsProtocol.Bluetooth: None,
+        }
+
+        if env.usb_interface and not isinstance(env.usb_interface, Skip):
+            self._comms[CommsProtocol.USB] = Printer(env.usb_interface)
+
+        if env.rs232_interface and not isinstance(env.rs232_interface, Skip):
+            self._comms[CommsProtocol.RS232] = Printer(env.rs232_interface)
+
+        if env.infrared_interface and not isinstance(env.infrared_interface, Skip):
+            self._comms[CommsProtocol.IrDA] = Printer(env.infrared_interface)
+
+        if env.bluetooth_interface and not isinstance(env.bluetooth_interface, Skip):
+            self._comms[CommsProtocol.Bluetooth] = Printer(env.bluetooth_interface)
 
     @keyword("Setup Printer Test Library")
     def setup(self) -> None:
-        usb = setup.from_user_get_comms_interface(CommsProtocol.USB, allow_skip=False)
-        rs = setup.from_user_get_comms_interface(CommsProtocol.RS232)
-        ir = setup.from_user_get_comms_interface(CommsProtocol.IrDA)
-        bt = setup.from_user_get_comms_interface(CommsProtocol.Bluetooth)
-
-        if not usb:
-            raise FatalError("")
-
-        # Use USB as a secure comm interface for sending commands.
-        self._secure_comms = Printer(usb)
-        self._comms = {
-            CommsProtocol.USB: self._secure_comms,
-            CommsProtocol.RS232: Printer(rs) if rs else None,
-            CommsProtocol.IrDA: Printer(ir) if ir else None,
-            CommsProtocol.Bluetooth: Printer(bt) if bt else None,
-        }
+        for interface in CommsProtocol:
+            if self._comms[interface] is None:
+                comms = setup.from_user_get_comms_interface(interface)
+                self._comms[interface] = Printer(comms) if comms else None
 
     ############################################################################
 
@@ -344,6 +349,9 @@ class PrinterTestLibrary:
 
     @keyword("Printer Clear Print Buffer")
     def clear_print_buffer(self) -> None:
+        if self._secure_comms is None:
+            raise FatalError("Secure printer comms has not been set.")
+
         self._secure_comms.send(martel.clear_print_buffer())
 
     def _get_test_name_or_none(self) -> str | None:

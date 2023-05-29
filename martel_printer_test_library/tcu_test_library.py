@@ -1,10 +1,13 @@
 import serial
-from typing import Final, Optional, cast
 import serial.tools.list_ports
+from typing import Final, Optional, cast
+from serial import Serial
 
 from robot.api import FatalError, Failure
 from robot.api.deco import keyword, library
 from robot.libraries import Dialogs
+
+from .environment import TestEnvironment
 
 from martel_tcu import TCU, RelayChannel, MeasureChannel
 
@@ -54,11 +57,17 @@ def amps_to_str(amps: float) -> str:
 
 @library(scope="GLOBAL")
 class TCUTestLibrary:
-    def __init__(self) -> None:
-        self._tcu: Optional[TCU]
+    def __init__(self, env: TestEnvironment = TestEnvironment()) -> None:
+        self._tcu: Optional[TCU] = None
+
+        if type(env.tcu_port) == Serial:
+            self._tcu = TCU(env.tcu_port)
 
     @keyword("Setup TCU Test Library")
     def setup(self) -> None:
+        if self._tcu is not None:
+            return
+
         ports: Final = serial.tools.list_ports.comports()
         selected_port = Dialogs.get_selection_from_user("Select the TCU port", *ports)
 

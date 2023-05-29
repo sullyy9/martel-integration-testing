@@ -1,7 +1,7 @@
 *** Settings ***
 Documentation       Tests for RS232 baud rate.
 
-Library             martel_printer_test_library.TCUTestLibrary
+Library             martel_printer_test_library.TCUTestLibrary    ${Environment}
 
 Test Setup          Run Keywords
 ...                     Set Battery Voltage    5V    AND

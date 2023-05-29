@@ -1,16 +1,15 @@
-from asyncio.subprocess import Process
-import contextlib
-import asyncio
 from typing import Optional
 
+from textual import on
 from textual.app import App, ComposeResult
 from textual.reactive import reactive
 from textual.message import Message
-from textual.containers import Container, Horizontal
-from textual.widgets import Header, Footer, Button, Placeholder, TextLog, Select
-from textual import on
+from textual.containers import Container
+from textual.widgets import Header, Footer, Button, Placeholder, TextLog
 
 from .port_selector import PortSelection
+from .runtest import TestInstance
+from ..environment import TestEnvironment, PrinterInterface
 
 
 class TestControls(Container):
@@ -38,6 +37,9 @@ class Terminal(Container):
     def watch_text(self) -> None:
         self.query_one(TextLog).write(self.text)
 
+    def clear(self) -> None:
+        self.query_one(TextLog).clear()
+
 
 class TestRunner(App):
     CSS_PATH = "test_runner.css"
@@ -45,22 +47,21 @@ class TestRunner(App):
 
     def __init__(self) -> None:
         super().__init__()
-        self._test_process: Optional[Process] = None
+        self._test_instance: Optional[TestInstance] = None
 
     def compose(self) -> ComposeResult:
-        """Create child widgets for the app."""
         yield Header()
-        yield Footer()
         yield Placeholder("Tabs", id="tabs")
-        yield PortSelection(id="port_selection")
+        yield PortSelection()
         yield Placeholder("Tag Selection", id="tag_selection")
         yield Terminal(id="terminal_area")
+        yield Footer()
 
         yield TestControls(id="test_controls_area")
 
     def action_quit(self) -> None:
-        if self._test_process is not None:
-            self._test_process.kill()
+        if self._test_instance is not None:
+            self._test_instance.kill()
         self.exit()
 
     def action_toggle_dark(self) -> None:
@@ -68,44 +69,37 @@ class TestRunner(App):
 
     @on(TestControls.StartTest)
     async def test_start_requested(self) -> None:
-        """Event handler called when a button is pressed."""
+        if self._test_instance is not None:
+            return
 
-        if self._test_process is None:
-            self._test_process = await asyncio.create_subprocess_exec(
-                "poetry",
-                "run",
-                "robot",
-                "--consolecolors",
-                "ANSI",
-                "--outputdir",
-                "./output_testsuite_pcb",
-                "--pythonpath",
-                "./martel_test_library",
-                "./testsuite_pcb",
-                stdout=asyncio.subprocess.PIPE,
-            )
+        self.query_one(Terminal).clear()
 
-            stdout: Optional[asyncio.StreamReader] = self._test_process.stdout
-            if stdout is None:
-                await self._test_process.wait()
-                return
+        # Set the test environment.
+        selection = self.query_one(PortSelection)
 
-            file = open("test_out", mode="wb")
+        tcu_port = selection.get_tcu_interface()
+        usb = selection.get_printer_interface(PrinterInterface.USB)
+        rs232 = selection.get_printer_interface(PrinterInterface.RS232)
+        infrared = selection.get_printer_interface(PrinterInterface.INFRARED)
+        bluetooth = selection.get_printer_interface(PrinterInterface.BLUETOOTH)
+        debug = selection.get_debug_interface()
 
-            while await self._test_is_running():
-                with contextlib.suppress(asyncio.TimeoutError):
-                    line: bytes = await asyncio.wait_for(stdout.readline(), 0.1)
-                    self.query_one(Terminal).text = line.decode().removesuffix("\n")
+        env = TestEnvironment(
+            tcu_port,
+            usb,
+            rs232,
+            infrared,
+            bluetooth,
+            debug,
+        )
 
-            self._test_process = None
+        self._test_instance = TestInstance(env)
+        await self._test_instance.start()
 
-    async def _test_is_running(self) -> bool:
-        if self._test_process is None:
-            return False
+        async for line in self._test_instance.output():
+            self.query_one(Terminal).text = line
 
-        with contextlib.suppress(asyncio.TimeoutError):
-            await asyncio.wait_for(self._test_process.wait(), 1e-6)
-        return self._test_process.returncode is None
+        self._test_instance = None
 
 
 if __name__ == "__main__":
