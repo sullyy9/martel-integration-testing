@@ -1,7 +1,7 @@
 {
     // Specified in the Pep8 standard.
     "editor.rulers": [
-        79
+        88
     ],
     "python.linting.pylintEnabled": true,
     "python.linting.enabled": true,

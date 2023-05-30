@@ -1,6 +1,5 @@
 import time
-from typing import Optional
-from numpy import isin
+from typing import Final, Optional
 
 from robot.api import FatalError, Failure
 from robot.api.deco import keyword, library
@@ -33,7 +32,7 @@ class PrinterDebugLibrary:
         # Ask the user which protocol to use for printer debug commands.
         # Then ask the user to setup an interface for the specified protocol.
         selection: str = Dialogs.get_selection_from_user(
-            f"Select a protocol for printer debug operations:",
+            "Select a protocol for printer debug operations:",
             *[comms.name for comms in CommsProtocol],
         )
         protocol = next(i for i in CommsProtocol if i.name == selection)
@@ -93,6 +92,21 @@ class PrinterDebugLibrary:
         self._printer.send(debug.set_debug_mode())
         self._printer.send(debug.set_channel(SetChannel.POWER_OFF))
 
-    @keyword('Printer Measure "${channel}"')
-    def measure_battery_voltage(self, channel: MeasureChannel) -> float:
-        raise NotImplementedError
+    @keyword("Printer Firmware Checksum Should Be")
+    def measure_printer_firmware_checksum(self, checksum: int) -> None:
+        if self._printer is None:
+            raise FatalError("Printer debug port has not been set.")
+
+        self._printer.send(debug.set_debug_mode())
+        command: Final = debug.measure_channel(MeasureChannel.PRINTER_FIRMWARE_CHECKSUM)
+        response: Final = self._printer.send_and_get_response(
+            command, terminator="\r".encode("ascii")
+        )
+
+        received_checksum: Final = int(response.removesuffix(b"\r"), 16)
+        if checksum != received_checksum:
+            raise Failure(
+                "Printer firmware checksum does not match the expected value\n"
+                f"Expected: {checksum}\n"
+                f"Received: {received_checksum}"
+            )

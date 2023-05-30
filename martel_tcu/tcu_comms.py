@@ -1,6 +1,7 @@
 from typing import Final
 import serial
 
+from martel_printer.command_set import debug_protocol
 from martel_printer.comms import CommsInterface, Parity
 
 from .tcu import TCU
@@ -8,10 +9,9 @@ from .types import RelayChannel, MeasureChannel, CommsMode
 
 
 class CommsThroughTCU(CommsInterface):
-    _tcu: TCU
-
     def __init__(self, tcu: TCU) -> None:
         self._tcu: Final = tcu
+        self._response: bytes | None = None
 
     @property
     def baudrate(self) -> int:
@@ -59,18 +59,30 @@ class CommsThroughTCU(CommsInterface):
 
     @property
     def in_waiting(self) -> int:
+        if self._response is not None:
+            return len(self._response)
+
         raise NotImplementedError("TCU does not pass through received comms")
 
     def open(self) -> None:
         ...
 
     def close(self) -> None:
-        pass
+        self._response = None
 
     def read(self, size: int = 1) -> bytes:
+        if self._response is not None:
+            result, self._response = self._response[:size], self._response[size:]
+            return result
+
         raise NotImplementedError("TCU does not pass through received comms")
 
     def write(self, data: bytes) -> None:
+        # Intercept and handle measure channel commands with the "W" TCU command.
+        if data.startswith(bytes([0x1B, 0, 0, ord("M")])):
+            self._response = self._tcu.print_with_response(data)
+            return
+
         self._tcu.print(data)
 
     def flush(self) -> None:

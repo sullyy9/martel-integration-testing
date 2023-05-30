@@ -135,7 +135,7 @@ class TCU:
 
         self._open_comms_if_closed()
         self._send_command(f"M{channel:0>2X}\r".encode(encoding="ascii"))
-        response = self._get_response()
+        response = int(self._get_response(), base=16)
         self._close_comms_if_open()
 
         self._log.info(f"Channel {channel.name} measurement={response}")
@@ -152,7 +152,7 @@ class TCU:
 
         """
 
-        self._log.info(f"Printing [{text}]")
+        self._log.info(f"Printing [{text.hex(' ').upper()}]")
 
         encoded_data: str = ""
         for byte in text:
@@ -169,6 +169,39 @@ class TCU:
         self._open_comms_if_closed()
         self._send_command(command)
         self._close_comms_if_open()
+
+    def print_with_response(self, text: bytes) -> bytes:
+        """
+        Send the given text to the printer and wait up to 10 seconds for a 4 byte
+        response.
+
+        Raises
+        ------
+        ValueError
+            If the text length is too long.
+
+        """
+
+        self._log.info(f"Printing [{text.hex(' ').upper()}] and expecting response")
+
+        encoded_data: str = ""
+        for byte in text:
+            encoded_data += f"{byte:0>2X}"
+
+        command: bytes = f"W{len(text):0>2X}{encoded_data}\r".encode("cp437")
+
+        if len(command) > self.MAX_BYTES_TX:
+            raise ValueError(
+                f"Attempted to send {len(command)} bytes to the TCU. "
+                "TCU can only recieve a maximum of 128 bytes at once."
+            )
+
+        self._open_comms_if_closed()
+        self._send_command(command)
+        response: Final = self._get_response()
+        self._close_comms_if_open()
+
+        return response
 
     def _open_comms_if_closed(self) -> None:
         self._log.debug("Opening comms")
@@ -213,7 +246,7 @@ class TCU:
                 f"response={response}\n"
             )
 
-    def _get_response(self) -> int:
+    def _get_response(self) -> bytes:
         """
         Await a response from the TCU and return it.
 
@@ -244,4 +277,4 @@ class TCU:
             )
 
         self._log.debug(f"Got response [{response}]")
-        return int(response, base=16)
+        return response

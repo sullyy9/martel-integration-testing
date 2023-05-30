@@ -131,11 +131,14 @@ class PortSelection(Container):
                 case PrinterInterface.BLUETOOTH:
                     return BluetoothThroughTCU(TCU(tcu_port))
                 case _:
-                    return None
+                    pass
+        
+        raise Exception(f"Unexpected {interface} interface selected: {selection}")
 
     def get_debug_interface(self) -> CommsInterface | None:
         interface = self.interface_ports["Debug"]
         if interface is None:
             return None
 
-        return self.get_printer_interface(PrinterInterface(interface))
+        interface = PrinterInterface(interface)
+        return self.get_printer_interface(interface)
