@@ -98,12 +98,12 @@ class PrinterDebugLibrary:
             raise FatalError("Printer debug port has not been set.")
 
         self._printer.send(debug.set_debug_mode())
-        command: Final = debug.measure_channel(MeasureChannel.PRINTER_FIRMWARE_CHECKSUM)
         response: Final = self._printer.send_and_get_response(
-            command, terminator="\r".encode("ascii")
-        )
+            debug.measure_channel(MeasureChannel.PRINTER_FIRMWARE_CHECKSUM),
+            terminator="\r".encode("ascii"),
+        ).removesuffix(b"\r")
 
-        received_checksum: Final = int(response.removesuffix(b"\r"), 16)
+        received_checksum: Final = int(response, 16)
         if checksum != received_checksum:
             raise Failure(
                 "Printer firmware checksum does not match the expected value\n"

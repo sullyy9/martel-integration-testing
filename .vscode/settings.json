@@ -14,7 +14,8 @@
     ],
     "robot.variables": {
         "OUTPUT DIR": "${workspaceFolder}/output",
-        "SAMPLE DIR": "${workspaceFolder}/samples"
+        "SAMPLE DIR": "${workspaceFolder}/samples",
+        "Environment": "",
     },
 
     "python.formatting.provider": "black",

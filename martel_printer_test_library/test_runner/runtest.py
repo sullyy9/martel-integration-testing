@@ -37,6 +37,8 @@ class TestInstance:
             "./martel_test_library",
             "--variablefile",
             f"{Path(environment.__file__).absolute()};{self._environment_file.name}",
+            "--exclude",
+            "mcp7800",
         ]
         command.extend(["--loglevel", log_level])
         command.append("./testsuite_pcb")

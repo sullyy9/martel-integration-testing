@@ -10,6 +10,7 @@ from robot.libraries.BuiltIn import BuiltIn, RobotNotRunningError
 from martel_printer import Printer, Encoding
 from martel_printer.comms import Parity
 from martel_printer.command_set import martel_protocol as martel
+from martel_printer.command_set import debug_protocol as debug
 
 from . import setup
 from .setup import CommsProtocol
@@ -339,11 +340,44 @@ class PrinterTestLibrary:
 
         response = comm_interface.send_and_get_response(
             data.encode("ascii"), timeout=5, terminator=data.encode("ascii")
-        )
+        ).decode("ascii")
+
         if response != data:
             raise Failure(
-                f"expected: {data} {len(data)} response: {response} {len(response)}"
+                "Echo does not match the transmitted string\n"
+                f"Expected: {data}\n"
+                f"Response: {response}"
             )
+
+    ############################################################################
+
+    @keyword("USB Send Dummy Command And Expect Response")
+    def usb_comms_check(self) -> None:
+        self.comms_check(CommsProtocol.USB)
+
+    @keyword("RS232 Send Dummy Command And Expect Response")
+    def rs232_comms_check(self) -> None:
+        self.comms_check(CommsProtocol.RS232)
+
+    @keyword("IrDA Send Dummy Command And Expect Response")
+    def irda_comms_check(self) -> None:
+        self.comms_check(CommsProtocol.IrDA)
+
+    @keyword("Bluetooth Dummy Send Command And Expect Response")
+    def bt_comms_check(self) -> None:
+        self.comms_check(CommsProtocol.Bluetooth)
+
+    def comms_check(self, interface: CommsProtocol) -> None:
+        comm_interface = self._comms[interface]
+        if not comm_interface:
+            raise SkipExecution(f"Skipping tests requiring {interface} interface.")
+
+        response = comm_interface.send_and_get_response(
+            debug.measure_channel(0), timeout=2, terminator=b"\r"
+        ).decode("cp437")
+
+        if response is None:
+            raise Failure("Printer did not respond to comms check command")
 
     ############################################################################
 
