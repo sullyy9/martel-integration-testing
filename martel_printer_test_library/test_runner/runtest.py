@@ -24,8 +24,8 @@ class TestInstance:
     def __del__(self) -> None:
         self._environment_file.delete = True
 
-    async def start(self) -> None:
-        self._process = await asyncio.create_subprocess_exec(
+    async def start(self, log_level: str = "INFO") -> None:
+        command = [
             "poetry",
             "run",
             "robot",
@@ -37,7 +37,12 @@ class TestInstance:
             "./martel_test_library",
             "--variablefile",
             f"{Path(environment.__file__).absolute()};{self._environment_file.name}",
-            "./testsuite_pcb",
+        ]
+        command.extend(["--loglevel", log_level])
+        command.append("./testsuite_pcb")
+
+        self._process = await asyncio.create_subprocess_exec(
+            *command,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
