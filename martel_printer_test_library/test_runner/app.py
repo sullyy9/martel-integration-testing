@@ -19,8 +19,12 @@ class TestControls(Container):
     class TestStartButton(Button):
         pass
 
+    class TestStopButton(Button):
+        pass
+
     def compose(self) -> ComposeResult:
-        yield self.TestStartButton("Start test", variant="success")
+        yield self.TestStopButton("Cancel Test", variant="error")
+        yield self.TestStartButton("Start Test", variant="success")
 
     @on(TestStartButton.Pressed)
     def start_button_pressed(self, event: TestStartButton.Pressed) -> None:

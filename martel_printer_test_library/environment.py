@@ -15,7 +15,7 @@ class Skip:
 class PrinterInterface(StrEnum):
     USB = "USB"
     RS232 = "RS232"
-    INFRARED = "Infrered"
+    INFRARED = "Infrared"
     BLUETOOTH = "Bluetooth"
 
 

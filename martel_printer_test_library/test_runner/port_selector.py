@@ -37,9 +37,8 @@ class PortSelector(Container):
         self._name: Final[str] = name
 
     def compose(self) -> ComposeResult:
-        with Horizontal():
-            yield Label(self._name)
-            yield Select(self._options)
+        yield Label(self._name, classes="port_selector_label")
+        yield Select(self._options, classes="port_selector_select")
 
     @on(Select.Changed)
     def port_selected(self, event: Select.Changed) -> None:

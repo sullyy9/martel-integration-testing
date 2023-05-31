@@ -2,6 +2,7 @@
 Documentation       Integration testing suite for Martel MCP1800 B series
 ...                 printers.
 
+Library             Dialogs
 Library             martel_printer_test_library.TCUTestLibrary    ${Environment}
 Library             martel_printer_test_library.PrinterDebugLibrary    ${Environment}
 Library             martel_printer_test_library.PrinterTestLibrary    ${Environment}
@@ -14,6 +15,6 @@ Suite Setup         Run Keywords
 ...                     Set Battery Voltage    5V    AND
 ...                     Enable Battery Power    AND
 ...                     Close Power Relays    AND
-...                     Wake Printer    AND
-...                     Sleep    1s
+...                     Pause Execution    Program printer and press ok  AND
+...                     Wake Printer
 Suite Teardown      Open Power Relays
