@@ -38,8 +38,8 @@ class TCU:
     PID: Final[list[int]] = [0x5740]
 
     MAX_BYTES_TX: Final[int] = 128
-    ACKNOWLDGE_TIMEOUT: Final[float] = 2.0
-    RESPONSE_TIMEOUT: Final[float] = 2.0
+    ACKNOWLDGE_TIMEOUT: Final[float] = 5.0
+    RESPONSE_TIMEOUT: Final[float] = 5.0
 
     BYTE_ENCODING: Final[str] = "cp437"
 
