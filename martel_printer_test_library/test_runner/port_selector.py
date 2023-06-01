@@ -131,7 +131,7 @@ class PortSelection(Container):
                     return BluetoothThroughTCU(TCU(tcu_port))
                 case _:
                     pass
-        
+
         raise Exception(f"Unexpected {interface} interface selected: {selection}")
 
     def get_debug_interface(self) -> CommsInterface | None:

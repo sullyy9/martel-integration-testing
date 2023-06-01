@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Final, Optional
 
 from textual import on
 from textual.app import App, ComposeResult
@@ -47,11 +47,16 @@ class Terminal(Container):
 
 class TestRunner(App):
     CSS_PATH = "test_runner.css"
-    BINDINGS = [("q", "quit", "Quit"), ("d", "toggle_dark", "Toggle dark mode")]
+    BINDINGS = [
+        ("q", "quit", "Quit"),
+        ("d", "toggle_dark", "Toggle dark mode"),
+        ("x", "toggle_debug", "Toggle debug mode"),
+    ]
 
     def __init__(self) -> None:
         super().__init__()
         self._test_instance: Optional[TestInstance] = None
+        self._debug_mode: bool = False
 
     def compose(self) -> ComposeResult:
         yield Header()
@@ -70,6 +75,9 @@ class TestRunner(App):
 
     def action_toggle_dark(self) -> None:
         self.dark = not self.dark
+
+    def action_toggle_debug(self) -> None:
+        self._debug_mode = not self._debug_mode
 
     @on(TestControls.StartTest)
     async def test_start_requested(self) -> None:
@@ -98,7 +106,9 @@ class TestRunner(App):
         )
 
         self._test_instance = TestInstance(env)
-        await self._test_instance.start()
+
+        log_level: Final[str] = "DEBUG" if self._debug_mode else "INFO"
+        await self._test_instance.start(log_level)
 
         async for line in self._test_instance.output():
             self.query_one(Terminal).text = line
