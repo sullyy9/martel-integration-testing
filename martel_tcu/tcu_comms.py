@@ -1,7 +1,6 @@
 from typing import Final
 import serial
 
-from martel_printer.command_set import debug_protocol
 from martel_printer.comms import CommsInterface, Parity
 
 from .tcu import TCU

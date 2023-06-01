@@ -1,3 +1,4 @@
+import time
 import weakref
 import logging
 from typing import Final
@@ -7,11 +8,11 @@ from serial import Serial
 from .types import RelayChannel, MeasureChannel
 
 
-class TCUNotResponding(Exception):
+class NotRespondingError(Exception):
     pass
 
 
-class TCUProtocolError(Exception):
+class NotAcknowldgedError(Exception):
     pass
 
 
@@ -37,6 +38,10 @@ class TCU:
     PID: Final[list[int]] = [0x5740]
 
     MAX_BYTES_TX: Final[int] = 128
+    ACKNOWLDGE_TIMEOUT: Final[float] = 2.0
+    RESPONSE_TIMEOUT: Final[float] = 2.0
+
+    BYTE_ENCODING: Final[str] = "cp437"
 
     def __init__(self, comms_interface: Serial, name: str = "TCU") -> None:
         """
@@ -57,7 +62,7 @@ class TCU:
         self._close_comms_if_open()
 
     def _cleanup(self) -> None:
-        self._log.info("Shutting down TCU instance")
+        self._log.info("Closing TCU instance")
         self._close_comms_if_open()
 
     def open_relay(self, relay: RelayChannel) -> None:
@@ -70,10 +75,10 @@ class TCU:
             Relay number to open.
 
         """
-        self._log.info(f"Opening relay {relay.name}")
+        self._log.info(f"Opening TCU relay.\n" f"Relay: {relay.name}")
 
         self._open_comms_if_closed()
-        self._send_command(f"O{relay:0>2X}\r".encode(encoding="charmap"))
+        self._send_command(f"O{relay:0>2X}\r".encode(self.BYTE_ENCODING))
         self._close_comms_if_open()
 
     def close_relay(self, relay: RelayChannel) -> None:
@@ -86,10 +91,10 @@ class TCU:
             Relay number to open.
 
         """
-        self._log.info(f"Closing relay {relay.name}")
+        self._log.info(f"Closing TCU relay.\n" f"Relay: {relay.name}")
 
         self._open_comms_if_closed()
-        self._send_command(f"C{relay:0>2X}\r".encode(encoding="charmap"))
+        self._send_command(f"C{relay:0>2X}\r".encode(self.BYTE_ENCODING))
         self._close_comms_if_open()
 
     def set_channel(self, channel: RelayChannel, value: int) -> None:
@@ -109,11 +114,16 @@ class TCU:
             If an error occurs in communicating with the TCU.
 
         """
-        self._log.info(f"Setting channel {channel.name} to {value}")
-        command = f"S{channel.value:0>2X}{value:0>4X}\r"
+        self._log.info(
+            f"Setting TCU channel.\n"
+            f"Channel: {channel.name}\n"
+            f"Channel value: {value}"
+        )
+
+        command = f"S{channel.value:0>2X}{value:0>4X}\r".encode(self.BYTE_ENCODING)
 
         self._open_comms_if_closed()
-        self._send_command(command.encode(encoding="charmap"))
+        self._send_command(command)
         self._close_comms_if_open()
 
     def measure_channel(self, channel: MeasureChannel) -> int:
@@ -131,14 +141,18 @@ class TCU:
             Value measured on the channel.
 
         """
-        self._log.info(f"Measuring channel {channel.name}")
+        self._log.info(f"Measuring TCU channel.\n" f"Channel: {channel.name}")
 
         self._open_comms_if_closed()
-        self._send_command(f"M{channel:0>2X}\r".encode(encoding="ascii"))
-        response = int(self._get_response(), base=16)
+        self._send_command(f"M{channel:0>2X}\r".encode(self.BYTE_ENCODING))
+        response: Final = int(self._get_response(), base=16)
         self._close_comms_if_open()
 
-        self._log.info(f"Channel {channel.name} measurement={response}")
+        self._log.info(
+            f"Measured TCU channel.\n"
+            f"Channel: {channel.name}\n"
+            f"Measurement: {response}"
+        )
         return response
 
     def print(self, text: bytes) -> None:
@@ -152,19 +166,10 @@ class TCU:
 
         """
 
-        self._log.info(f"Printing [{text.hex(' ').upper()}]")
+        self._log.info(f"Printing [{text.hex(' ').upper()}] via TCU")
 
-        encoded_data: str = ""
-        for byte in text:
-            encoded_data += f"{byte:0>2X}"
-
-        command: bytes = f"P{len(text):0>2X}{encoded_data}\r".encode("cp437")
-
-        if len(command) > self.MAX_BYTES_TX:
-            raise ValueError(
-                f"Attempted to send {len(command)} bytes to the TCU. "
-                "TCU can only recieve a maximum of 128 bytes at once."
-            )
+        encoded_data: str = text.hex().upper()
+        command: bytes = f"P{len(text):0>2X}{encoded_data}\r".encode(self.BYTE_ENCODING)
 
         self._open_comms_if_closed()
         self._send_command(command)
@@ -182,35 +187,29 @@ class TCU:
 
         """
 
-        self._log.info(f"Printing [{text.hex(' ').upper()}] and expecting response")
+        self._log.info(
+            f"Printing [{text.hex(' ').upper()}] via TCU and expecting response"
+        )
 
-        encoded_data: str = ""
-        for byte in text:
-            encoded_data += f"{byte:0>2X}"
-
-        command: bytes = f"W{len(text):0>2X}{encoded_data}\r".encode("cp437")
-
-        if len(command) > self.MAX_BYTES_TX:
-            raise ValueError(
-                f"Attempted to send {len(command)} bytes to the TCU. "
-                "TCU can only recieve a maximum of 128 bytes at once."
-            )
+        encoded_data: str = text.hex().upper()
+        command: bytes = f"W{len(text):0>2X}{encoded_data}\r".encode(self.BYTE_ENCODING)
 
         self._open_comms_if_closed()
         self._send_command(command)
         response: Final = self._get_response()
         self._close_comms_if_open()
 
+        self._log.info(f"Received response from TCU [{response.hex(' ').upper()}]")
         return response
 
     def _open_comms_if_closed(self) -> None:
-        self._log.debug("Opening comms")
+        self._log.debug("Opening TCU comms")
 
         if not self._comms.is_open:
             self._comms.open()
 
     def _close_comms_if_open(self) -> None:
-        self._log.debug("Closing comms")
+        self._log.debug("Closing TCU comms")
 
         if self._comms.is_open:
             self._comms.close()
@@ -231,20 +230,42 @@ class TCU:
             If the TCU fails to echo back the command.
 
         """
-        self._log.debug(f"Sending command [{command}]")
+        self._log.debug(f"Sending command to TCU [{command.hex(' ').upper()}]")
+
+        if len(command) > self.MAX_BYTES_TX:
+            raise ValueError(
+                "TCU command too long.\n"
+                f"Command length: {len(command)} bytes.\n"
+                "Commands should be 128 bytes at most to avoid TCU buffer overflow."
+            )
 
         self._comms.write(command)
         self._comms.flush()
 
-        response: bytes = self._comms.read_until(b"\r")
+        # Wait for the TCU to acknowledge the command.
+        timeout_point = time.monotonic() + self.ACKNOWLDGE_TIMEOUT
+        response: bytes = bytes()
+        while response != command:
+            if not command.startswith(response):
+                raise NotAcknowldgedError(
+                    "TCU failed to acknowledge command.\n"
+                    f"Expected: [{command.hex(' ').upper()}]\n"
+                    f"Received: [{response.hex(' ').upper()}]\n"
+                    "Response should match the command but does not."
+                )
 
-        if response != command:
-            self._log.error(f"Command not acknowledged. response={response}\n")
-            raise TCUNotResponding(
-                f"TCU failed to acknowledge command.\n"
-                f"command={command}\n"
-                f"response={response}\n"
-            )
+            if time.monotonic() > timeout_point:
+                raise NotAcknowldgedError(
+                    "TCU failed to acknowledge command.\n"
+                    f"Expected: [{command.hex(' ').upper()}]\n"
+                    f"Received: [{response.hex(' ').upper()}]\n"
+                    "Full acknowledgement not received within timeout period."
+                )
+
+            if self._comms.in_waiting > 0:
+                response += self._comms.read()
+
+        self._log.debug("Command acknowledged by TCU.")
 
     def _get_response(self) -> bytes:
         """
@@ -261,20 +282,21 @@ class TCU:
             If the USB interface has not been initialised.
 
         """
-        self._log.debug("Awaiting response")
+        self._log.debug("Awaiting response from TCU")
 
         response: bytes = self._comms.read_until(b"\r", size=256)
+        timeout_point = time.monotonic() + self.RESPONSE_TIMEOUT
+        response: bytes = bytes()
+        while not response.endswith(b"\r"):
+            if time.monotonic() > timeout_point:
+                raise NotRespondingError(
+                    "TCU failed to return response.\n"
+                    f"Response: [{response.hex(' ').upper()}]\n"
+                    "Full CR terminated response not received within timeout period."
+                )
 
-        if len(response) == 0:
-            print(response)
-            self._log.error("Timeout occured while awaiting response")
-            raise TCUNotResponding("Timeout occured while awaiting TCU response.")
+            if self._comms.in_waiting > 0:
+                response += self._comms.read()
 
-        elif not response.endswith(b"\r"):
-            self._log.error(f"Received invalid response. response=[{response}]")
-            raise TCUProtocolError(
-                f"Received invalid response from TCU.\n" f"response=[{response}]"
-            )
-
-        self._log.debug(f"Got response [{response}]")
+        self._log.debug(f"Got response from TCU [{response.hex(' ').upper()}]")
         return response
