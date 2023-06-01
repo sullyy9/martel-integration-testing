@@ -284,7 +284,6 @@ class TCU:
         """
         self._log.debug("Awaiting response from TCU")
 
-        response: bytes = self._comms.read_until(b"\r", size=256)
         timeout_point = time.monotonic() + self.RESPONSE_TIMEOUT
         response: bytes = bytes()
         while not response.endswith(b"\r"):

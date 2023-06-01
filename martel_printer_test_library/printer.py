@@ -372,6 +372,7 @@ class PrinterTestLibrary:
         if not comm_interface:
             raise SkipExecution(f"Skipping tests requiring {interface} interface.")
 
+        comm_interface.send(debug.set_debug_mode())
         response = comm_interface.send_and_get_response(
             debug.measure_channel(0), timeout=2, terminator=b"\r"
         ).decode("cp437")
