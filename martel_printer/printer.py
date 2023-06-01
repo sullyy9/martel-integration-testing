@@ -113,7 +113,7 @@ class Printer:
             to ensure this matches the encoding the printer is configured to.
 
         """
-        self.print(text + bytes(ControlCode.LF).decode(encoding))
+        self.print((text + chr(ControlCode.LF)), encoding=encoding)
 
     def _open_comms_if_closed(self) -> None:
         if not self.comms.is_open:
