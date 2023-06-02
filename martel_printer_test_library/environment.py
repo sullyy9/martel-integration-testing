@@ -8,15 +8,9 @@ from serial import Serial
 from martel_printer.comms import CommsInterface
 from martel_tcu.tcu_comms import CommsThroughTCU
 
+
 class Skip:
     pass
-
-
-class PrinterInterface(StrEnum):
-    USB = "USB"
-    RS232 = "RS232"
-    INFRARED = "Infrared"
-    BLUETOOTH = "Bluetooth"
 
 
 @dataclass
@@ -52,5 +46,5 @@ class TestEnvironment:
 def get_variables(environment_file_path: str | None) -> dict:
     if environment_file_path is None or len(environment_file_path) == 0:
         return {"ENVIRONMENT": TestEnvironment()}
-    
+
     return {"ENVIRONMENT": TestEnvironment.load(Path(environment_file_path))}

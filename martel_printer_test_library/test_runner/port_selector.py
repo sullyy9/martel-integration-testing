@@ -1,3 +1,4 @@
+from enum import Enum, StrEnum, auto
 import serial.tools.list_ports
 from typing import Final, Optional
 from serial import Serial
@@ -11,8 +12,6 @@ from textual.widgets import Select, Label
 from martel_printer.comms.interface import CommsInterface
 from martel_tcu import TCU, RS232ThroughTCU, IrDAThroughTCU, BluetoothThroughTCU
 
-from ..environment import PrinterInterface
-
 
 STANDARD_PORTS: Final = [
     "COM29",
@@ -22,19 +21,28 @@ STANDARD_PORTS: Final = [
 ]
 
 
+class Selector(StrEnum):
+    TCU = "TCU"
+    USB = "USB"
+    RS232 = "RS232"
+    INFRARED = "Infrared"
+    BLUETOOTH = "Bluetooth"
+    DEBUG = "Debug"
+
+
 class PortSelector(Container):
     class PortSelected(Message):
-        def __init__(self, interface_name: str, selection: str | None) -> None:
+        def __init__(self, selector: Selector, selection: str | None) -> None:
             super().__init__()
 
-            self.interface_name: Final[str] = interface_name
+            self.selector: Final[Selector] = selector
             self.selection: Final[str | None] = selection
 
-    def __init__(self, name: str, options: list[str]) -> None:
+    def __init__(self, name: Selector, options: list[str]) -> None:
         super().__init__()
 
         self._options: Final = [(s, s) for s in options]
-        self._name: Final[str] = name
+        self._name: Final[Selector] = name
 
     def compose(self) -> ComposeResult:
         yield Label(self._name, classes="port_selector_label")
@@ -42,15 +50,11 @@ class PortSelector(Container):
 
     @on(Select.Changed)
     def port_selected(self, event: Select.Changed) -> None:
-        event.stop()
-        if event.value is None:
-            self.post_message(self.PortSelected(self._name, event.value))
-
-        elif type(event.value) is str:
-            self.post_message(self.PortSelected(self._name, event.value))
-
-        else:
+        if not isinstance(event.value, (type(None), Selector, str)):
             raise Exception("Unknown port type selcted.")
+
+        event.stop()
+        self.post_message(self.PortSelected(self._name, event.value))
 
 
 ##################################################
@@ -60,43 +64,31 @@ class PortSelection(Container):
     def __init__(self) -> None:
         super().__init__()
 
-        self.interface_ports: dict[str, Optional[str]] = dict.fromkeys(
-            ["TCU", "Debug", *[i.value for i in PrinterInterface]]
-        )
+        self.interface_ports: dict[StrEnum, Optional[str]] = dict.fromkeys(Selector)
 
-        self._connected_ports = serial.tools.list_ports.comports()
-        self._connected_ports = [p.name for p in self._connected_ports]
+        self._active_ports = self._get_active_ports()
 
     def compose(self) -> ComposeResult:
-        self._connected_ports = serial.tools.list_ports.comports()
-        self._connected_ports = [p.name for p in self._connected_ports]
+        self._active_ports = self._get_active_ports()
 
         with Horizontal():
             with Vertical():
-                yield PortSelector("TCU", self._connected_ports)
-
-                yield PortSelector(PrinterInterface.USB, STANDARD_PORTS)
-                yield PortSelector(
-                    PrinterInterface.RS232, ["Through TCU", *STANDARD_PORTS]
-                )
+                yield PortSelector(Selector.TCU, self._active_ports)
+                yield PortSelector(Selector.USB, STANDARD_PORTS)
+                yield PortSelector(Selector.RS232, ["Through TCU", *STANDARD_PORTS])
 
             with Vertical():
-                yield PortSelector(
-                    PrinterInterface.INFRARED, ["Through TCU", *STANDARD_PORTS]
-                )
-                yield PortSelector(PrinterInterface.BLUETOOTH, ["Through TCU"])
-
-                yield PortSelector(
-                    "Debug", [PrinterInterface.USB.value, PrinterInterface.RS232.value]
-                )
+                yield PortSelector(Selector.INFRARED, ["Through TCU", *STANDARD_PORTS])
+                yield PortSelector(Selector.BLUETOOTH, ["Through TCU"])
+                yield PortSelector(Selector.DEBUG, [Selector.USB, Selector.RS232])
 
     @on(PortSelector.PortSelected)
     def port_selected(self, event: PortSelector.PortSelected):
         event.stop()
-        self.interface_ports[event.interface_name] = event.selection
+        self.interface_ports[event.selector] = event.selection
 
     def get_tcu_interface(self) -> Serial | None:
-        selection = self.interface_ports["TCU"]
+        selection = self.interface_ports[Selector.TCU]
 
         if selection is None:
             return None
@@ -105,14 +97,12 @@ class PortSelection(Container):
         port.port = selection
         return port
 
-    def get_printer_interface(
-        self, interface: PrinterInterface
-    ) -> CommsInterface | None:
+    def get_printer_interface(self, interface: Selector) -> CommsInterface | None:
         selection = self.interface_ports[interface]
         if selection is None:
             return None
 
-        if selection in STANDARD_PORTS or selection in self._connected_ports:
+        if selection in STANDARD_PORTS or selection in self._active_ports:
             port = Serial()
             port.port = selection
             return port
@@ -123,11 +113,11 @@ class PortSelection(Container):
                 return None
 
             match interface:
-                case PrinterInterface.RS232:
+                case Selector.RS232:
                     return RS232ThroughTCU(TCU(tcu_port))
-                case PrinterInterface.INFRARED:
+                case Selector.INFRARED:
                     return IrDAThroughTCU(TCU(tcu_port))
-                case PrinterInterface.BLUETOOTH:
+                case Selector.BLUETOOTH:
                     return BluetoothThroughTCU(TCU(tcu_port))
                 case _:
                     pass
@@ -135,9 +125,11 @@ class PortSelection(Container):
         raise Exception(f"Unexpected {interface} interface selected: {selection}")
 
     def get_debug_interface(self) -> CommsInterface | None:
-        interface = self.interface_ports["Debug"]
+        interface = self.interface_ports[Selector.DEBUG]
         if interface is None:
             return None
 
-        interface = PrinterInterface(interface)
-        return self.get_printer_interface(interface)
+        return self.get_printer_interface(Selector(interface))
+
+    def _get_active_ports(self) -> list[str]:
+        return [p.name for p in serial.tools.list_ports.comports()]

@@ -7,9 +7,9 @@ from textual.message import Message
 from textual.containers import Container
 from textual.widgets import Header, Footer, Button, Placeholder, TextLog
 
-from .port_selector import PortSelection
+from .port_selector import PortSelection, Selector
 from .runtest import TestInstance
-from ..environment import TestEnvironment, PrinterInterface
+from ..environment import TestEnvironment
 
 
 class TestControls(Container):
@@ -90,10 +90,10 @@ class TestRunner(App):
         selection = self.query_one(PortSelection)
 
         tcu_port = selection.get_tcu_interface()
-        usb = selection.get_printer_interface(PrinterInterface.USB)
-        rs232 = selection.get_printer_interface(PrinterInterface.RS232)
-        infrared = selection.get_printer_interface(PrinterInterface.INFRARED)
-        bluetooth = selection.get_printer_interface(PrinterInterface.BLUETOOTH)
+        usb = selection.get_printer_interface(Selector.USB)
+        rs232 = selection.get_printer_interface(Selector.RS232)
+        infrared = selection.get_printer_interface(Selector.INFRARED)
+        bluetooth = selection.get_printer_interface(Selector.BLUETOOTH)
         debug = selection.get_debug_interface()
 
         env = TestEnvironment(
