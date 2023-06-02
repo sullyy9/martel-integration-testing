@@ -15,6 +15,6 @@ Suite Setup         Run Keywords
 ...                     Set Battery Voltage    5V    AND
 ...                     Enable Battery Power    AND
 ...                     Close Power Relays    AND
-...                     Pause Execution    Program printer and press ok  AND
+...                     Pause Execution    Program printer and press ok    AND
 ...                     Wake Printer
 Suite Teardown      Open Power Relays

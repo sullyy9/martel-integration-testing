@@ -1,3 +1,4 @@
+from enum import Enum
 import time
 from typing import Final, Optional
 
@@ -12,6 +13,37 @@ from martel_printer.command_set.debug_protocol import MeasureChannel, SetChannel
 from . import setup
 from .setup import CommsProtocol
 from .environment import TestEnvironment, Skip
+
+
+class PrinterTest(Enum):
+    BATTERY_VOLTAGE = MeasureChannel.BATTERY_VOLTAGE
+    CHARGER_VOLTAGE = MeasureChannel.CHARGER_VOLTAGE
+    VCC_VOLTAGE = MeasureChannel.VCC_VOLTAGE
+    MECH_VOLTAGE = MeasureChannel.MECH_VOLTAGE
+
+    MECH_TEMPERATURE = MeasureChannel.MECH_TEMPERATURE
+    PAPER_SENSOR = MeasureChannel.PAPER_SENSOR
+    WAKEUP_SIGNAL = MeasureChannel.WAKEUP_SIGNAL
+    BUTTON_STATE = MeasureChannel.BUTTON_STATE
+    RTC_PRESENT = MeasureChannel.RTC_PRESENT
+    PRINTER_FIRMWARE_CHECKSUM = MeasureChannel.PRINTER_FIRMWARE_CHECKSUM
+    MECH_BUSY = MeasureChannel.MECH_BUSY
+
+    BLUETOOTH_ADDRESS_1 = MeasureChannel.BLUETOOTH_ADDRESS_1
+    BLUETOOTH_ADDRESS_2 = MeasureChannel.BLUETOOTH_ADDRESS_2
+    BLUETOOTH_ADDRESS_3 = MeasureChannel.BLUETOOTH_ADDRESS_3
+
+    FONT_LIBRARY_VALID = MeasureChannel.FONT_LIBRARY_VALID
+
+    ADC_PAPER_SENSOR = MeasureChannel.ADC_PAPER_SENSOR
+    ADC_MECH_TEMPERATURE = MeasureChannel.ADC_MECH_TEMPERATURE
+    ADC_BATTERY = MeasureChannel.ADC_BATTERY
+    ADC_CHARGER = MeasureChannel.ADC_CHARGER
+
+    FONT_LIBRARY_VERSION_MAJOR = MeasureChannel.FONT_LIBRARY_VERSION_MAJOR
+    FONT_LIBRARY_VERSION_MINOR = MeasureChannel.FONT_LIBRARY_VERSION_MINOR
+    BLUETOOTH_FIRMWARE_VERSION_MAJOR = MeasureChannel.BLUETOOTH_FIRMWARE_VERSION_MAJOR
+    BLUETOOTH_FIRMWARE_VERSION_MINOR = MeasureChannel.BLUETOOTH_FIRMWARE_VERSION_MINOR
 
 
 @library(scope="GLOBAL")
@@ -92,21 +124,31 @@ class PrinterDebugLibrary:
         self._printer.send(debug.set_debug_mode())
         self._printer.send(debug.set_channel(SetChannel.POWER_OFF))
 
-    @keyword("Printer Firmware Checksum Should Be")
-    def measure_printer_firmware_checksum(self, checksum: int) -> None:
+    @keyword("Printer Measure")
+    def printer_test_equal(self, channel: PrinterTest) -> int | float:
         if self._printer is None:
             raise FatalError("Printer debug port has not been set.")
 
         self._printer.send(debug.set_debug_mode())
         response: Final = self._printer.send_and_get_response(
-            debug.measure_channel(MeasureChannel.PRINTER_FIRMWARE_CHECKSUM),
-            terminator="\r".encode("ascii"),
-        ).removesuffix(b"\r")
+            debug.measure_channel(channel.value), terminator=b"\r"
+        )
 
-        received_checksum: Final = int(response, 16)
-        if checksum != received_checksum:
+        if not response.endswith(b"\r"):
             raise Failure(
-                "Printer firmware checksum does not match the expected value\n"
-                f"Expected: {checksum}\n"
-                f"Received: {received_checksum}"
+                "Unexpected response from printer.\n"
+                f"Response: [{response.hex(' ').upper()}]\n"
+                "CR terminator not present. Response may be incomplete."
             )
+        result = int(response.removesuffix(b"\r"), 16)
+
+        if (
+            channel == PrinterTest.BATTERY_VOLTAGE
+            or channel == PrinterTest.CHARGER_VOLTAGE
+            or channel == PrinterTest.VCC_VOLTAGE
+            or channel == PrinterTest.MECH_VOLTAGE
+            or channel == PrinterTest.MECH_TEMPERATURE
+        ):
+            return float(result) / 1000
+
+        return result

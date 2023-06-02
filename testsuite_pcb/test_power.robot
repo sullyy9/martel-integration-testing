@@ -16,8 +16,10 @@ Test MCP1800 Off Current
     Sleep    1s
     Open Power Relays
     Battery Voltage Drop 5s Should Be Less Than    400mV
-    Close Power Relays
-    Wake Printer
+
+    [Teardown]    Run Keywords
+    ...    Close Power Relays    AND
+    ...    Wake Printer
 
 Test MCP1800 On Current
     [Documentation]    Test the current consumption while the printer is powered on.
