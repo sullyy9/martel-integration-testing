@@ -1,13 +1,14 @@
-import contextlib
 import asyncio
 from pathlib import Path
+import signal
+import subprocess
 from tempfile import NamedTemporaryFile
 from typing import Optional
 from asyncio.subprocess import Process
+from asyncio.queues import Queue
 
 from .. import environment
 from ..environment import TestEnvironment
-from martel_printer_test_library import environment
 
 
 class TestInstance:
@@ -21,10 +22,12 @@ class TestInstance:
         test_env.save(self._environment_file)
         self._environment_file.close()
 
+        self.test_output: Queue = Queue()
+
     def __del__(self) -> None:
         self._environment_file.delete = True
 
-    async def start(self, log_level: str = "INFO") -> None:
+    async def run(self, log_level: str = "INFO"):
         command = [
             "poetry",
             "run",
@@ -47,32 +50,44 @@ class TestInstance:
             *command,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
+            stdin=asyncio.subprocess.PIPE,
+            creationflags=subprocess.CREATE_NEW_PROCESS_GROUP,
         )
 
         self._stdout = self._process.stdout
         self._stderr = self._process.stderr
 
+        async for line in self.output():
+            await self.test_output.put(line)
+
+        await self._process.wait()
+
     def kill(self) -> None:
         if self._process is not None:
-            self._process.kill()
-
-    async def is_running(self) -> bool:
-        if self._process is None:
-            return False
-
-        with contextlib.suppress(asyncio.TimeoutError):
-            await asyncio.wait_for(self._process.wait(), 1e-6)
-        return self._process.returncode is None
+            self._process.send_signal(signal.CTRL_BREAK_EVENT)
 
     async def output(self):
-        if self._stdout is None or self._stderr is None:
+        if self._process is None or self._stdout is None or self._stderr is None:
             raise StopAsyncIteration
 
-        while await self.is_running():
-            with contextlib.suppress(asyncio.TimeoutError):
-                line: bytes = await asyncio.wait_for(self._stdout.readline(), 0.01)
-                yield line.decode().removesuffix("\n")
+        while self._process.returncode is None:
+            done, remaining = await asyncio.wait(
+                [
+                    asyncio.Task(self._stdout.readline(), name="stdout"),
+                    asyncio.Task(self._stderr.readline(), name="stderr"),
+                    asyncio.Task(self._process.wait(), name="complete"),
+                ],
+                return_when="FIRST_COMPLETED",
+            )
 
-            with contextlib.suppress(asyncio.TimeoutError):
-                line: bytes = await asyncio.wait_for(self._stderr.readline(), 0.01)
-                yield line.decode().removesuffix("\n")
+            for task in remaining:
+                task.cancel()
+
+            for task in done:
+                if task.get_name() == "complete":
+                    break
+
+                if task.get_name() == "stdout" or task.get_name() == "stderr":
+                    result = task.result()
+                    if type(result) is bytes:
+                        yield result.decode().removesuffix("\n")

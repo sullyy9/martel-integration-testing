@@ -1,3 +1,5 @@
+import asyncio
+import contextlib
 from typing import Final, Optional
 
 from textual import on
@@ -6,6 +8,7 @@ from textual.reactive import reactive
 from textual.message import Message
 from textual.containers import Container
 from textual.widgets import Header, Footer, Button, Placeholder, TextLog
+from textual.worker import Worker, WorkerState
 
 from .port_selector import PortSelection, Selector
 from .runtest import TestInstance
@@ -16,20 +19,22 @@ class TestControls(Container):
     class StartTest(Message):
         pass
 
-    class TestStartButton(Button):
-        pass
-
-    class TestStopButton(Button):
+    class StopTest(Message):
         pass
 
     def compose(self) -> ComposeResult:
-        yield self.TestStopButton("Cancel Test", variant="error")
-        yield self.TestStartButton("Start Test", variant="success")
+        yield Button("Cancel Test", id="stop_test", variant="error")
+        yield Button("Start Test", id="start_test", variant="success")
 
-    @on(TestStartButton.Pressed)
-    def start_button_pressed(self, event: TestStartButton.Pressed) -> None:
+    @on(Button.Pressed, "#start_test")
+    def start_button_pressed(self, event: Button.Pressed) -> None:
         event.stop()
         self.post_message(self.StartTest())
+
+    @on(Button.Pressed, "#stop_test")
+    def stop_button_pressed(self, event: Button.Pressed) -> None:
+        event.stop()
+        self.post_message(self.StopTest())
 
 
 class Terminal(Container):
@@ -55,7 +60,7 @@ class TestRunner(App):
 
     def __init__(self) -> None:
         super().__init__()
-        self._test_instance: Optional[TestInstance] = None
+        self._test_instance: Optional[Worker] = None
         self._debug_mode: bool = False
 
     def compose(self) -> ComposeResult:
@@ -70,7 +75,7 @@ class TestRunner(App):
 
     def action_quit(self) -> None:
         if self._test_instance is not None:
-            self._test_instance.kill()
+            self._test_instance.cancel()
         self.exit()
 
     def action_toggle_dark(self) -> None:
@@ -105,15 +110,39 @@ class TestRunner(App):
             debug,
         )
 
-        self._test_instance = TestInstance(env)
+        self._test_instance = self.run_worker(self.run_test(TestInstance(env)))
 
+    @on(TestControls.StopTest)
+    async def test_stop_requested(self) -> None:
+        if self._test_instance is None:
+            return
+
+        self._test_instance.cancel()
+
+    async def run_test(self, test: TestInstance) -> None:
         log_level: Final[str] = "DEBUG" if self._debug_mode else "INFO"
-        await self._test_instance.start(log_level)
 
-        async for line in self._test_instance.output():
-            self.query_one(Terminal).text = line
+        test_run = asyncio.ensure_future(test.run(log_level))
+        try:
+            while not test_run.done():
+                with contextlib.suppress(asyncio.TimeoutError):
+                    line = await asyncio.wait_for(test.test_output.get(), 0.001)
+                    self.query_one(Terminal).text = line
 
-        self._test_instance = None
+        except asyncio.CancelledError:
+            test.kill()
+            while not test_run.done():
+                with contextlib.suppress(asyncio.TimeoutError):
+                    line = await asyncio.wait_for(test.test_output.get(), 0.001)
+                    self.query_one(Terminal).text = line
+
+    @on(Worker.StateChanged)
+    def test_complete(self) -> None:
+        if self._test_instance is None:
+            return
+
+        if self._test_instance.state != WorkerState.RUNNING:
+            self._test_instance = None
 
 
 if __name__ == "__main__":
