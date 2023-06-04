@@ -10,9 +10,9 @@ from textual.containers import Container
 from textual.widgets import Header, Footer, Button, Placeholder, TextLog
 from textual.worker import Worker, WorkerState
 
-from .port_selector import PortSelection, Selector
 from .runtest import TestInstance
 from ..environment import TestEnvironment
+from .selectors import Selectors, Interface
 
 
 class TestControls(Container):
@@ -58,15 +58,30 @@ class TestRunner(App):
         ("x", "toggle_debug", "Toggle debug mode"),
     ]
 
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        primary_interface: Interface | None = None,
+        usb_interface: str | None = None,
+        rs232_interface: str | None = None,
+        infrared_interface: str | None = None,
+        bluetooth_interface: str | None = None,
+    ) -> None:
         super().__init__()
         self._test_instance: Optional[Worker] = None
         self._debug_mode: bool = False
 
+        self.selectors = Selectors(
+            primary_interface=primary_interface,
+            usb_interface=usb_interface,
+            rs232_interface=rs232_interface,
+            infrared_interface=infrared_interface,
+            bluetooth_interface=bluetooth_interface,
+        )
+
     def compose(self) -> ComposeResult:
         yield Header()
         yield Placeholder("Tabs", id="tabs")
-        yield PortSelection()
+        yield self.selectors
         yield Placeholder("Tag Selection", id="tag_selection")
         yield Terminal(id="terminal_area")
         yield Footer()
@@ -91,15 +106,12 @@ class TestRunner(App):
 
         self.query_one(Terminal).clear()
 
-        # Set the test environment.
-        selection = self.query_one(PortSelection)
-
-        tcu_port = selection.get_tcu_interface()
-        usb = selection.get_printer_interface(Selector.USB)
-        rs232 = selection.get_printer_interface(Selector.RS232)
-        infrared = selection.get_printer_interface(Selector.INFRARED)
-        bluetooth = selection.get_printer_interface(Selector.BLUETOOTH)
-        debug = selection.get_debug_interface()
+        tcu_port = self.selectors.get_tcu_interface()
+        primary = self.selectors.get_primary_interface()
+        usb = self.selectors.get_printer_interface(Interface.USB)
+        rs232 = self.selectors.get_printer_interface(Interface.RS232)
+        infrared = self.selectors.get_printer_interface(Interface.INFRARED)
+        bluetooth = self.selectors.get_printer_interface(Interface.BLUETOOTH)
 
         env = TestEnvironment(
             tcu_port,
@@ -107,7 +119,7 @@ class TestRunner(App):
             rs232,
             infrared,
             bluetooth,
-            debug,
+            primary,
         )
 
         self._test_instance = self.run_worker(self.run_test(TestInstance(env)))

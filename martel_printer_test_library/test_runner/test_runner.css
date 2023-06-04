@@ -34,7 +34,31 @@ PortSelection {
     border: hkey rgb(0, 0, 0);
 }
 
+Selectors {
+    width: 100%;
+    height: 100%;
+    border: hkey rgb(0, 0, 0);
+}
+
 PortSelector {
+    layout: grid;
+    grid-size: 2 1;
+    grid-columns: 9 1fr;
+}
+
+TCUSelect {
+    layout: grid;
+    grid-size: 2 1;
+    grid-columns: 9 1fr;
+}
+
+PrimarySelect {
+    layout: grid;
+    grid-size: 2 1;
+    grid-columns: 9 1fr;
+}
+
+InterfaceSelect {
     layout: grid;
     grid-size: 2 1;
     grid-columns: 9 1fr;
