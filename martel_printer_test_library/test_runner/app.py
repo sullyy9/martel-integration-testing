@@ -1,5 +1,6 @@
 import asyncio
 import contextlib
+from pathlib import Path
 from typing import Final, Optional
 
 from textual import on
@@ -13,6 +14,7 @@ from textual.worker import Worker, WorkerState
 from .runtest import TestInstance
 from ..environment import TestEnvironment
 from .selectors import Selectors, Interface
+from .tags import TagSelector
 
 
 class TestControls(Container):
@@ -67,6 +69,8 @@ class TestRunner(App):
         bluetooth_interface: str | None = None,
     ) -> None:
         super().__init__()
+        self._testsuite = Path("./testsuite_pcb")
+
         self._test_instance: Optional[Worker] = None
         self._debug_mode: bool = False
 
@@ -78,11 +82,14 @@ class TestRunner(App):
             bluetooth_interface=bluetooth_interface,
         )
 
+        self._tag_selector: Final = TagSelector()
+        self._tag_selector.update_tags(self._testsuite)
+
     def compose(self) -> ComposeResult:
         yield Header()
         yield Placeholder("Tabs", id="tabs")
         yield self.selectors
-        yield Placeholder("Tag Selection", id="tag_selection")
+        yield self._tag_selector
         yield Terminal(id="terminal_area")
         yield Footer()
 
@@ -122,7 +129,8 @@ class TestRunner(App):
             primary,
         )
 
-        self._test_instance = self.run_worker(self.run_test(TestInstance(env)))
+        tags = self._tag_selector.get_selected_tags()
+        self._test_instance = self.run_worker(self.run_test(TestInstance(env, tags)))
 
     @on(TestControls.StopTest)
     async def test_stop_requested(self) -> None:

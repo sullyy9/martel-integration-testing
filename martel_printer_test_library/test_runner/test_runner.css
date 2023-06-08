@@ -9,8 +9,9 @@ Screen {
     column-span: 2;
 }
 
-#tag_selection {
+TagSelector {
     row-span: 2;
+    padding: 1;
 }
 
 Terminal {

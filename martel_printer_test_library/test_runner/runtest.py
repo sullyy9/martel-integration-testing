@@ -12,7 +12,7 @@ from ..environment import TestEnvironment
 
 
 class TestInstance:
-    def __init__(self, test_env: TestEnvironment) -> None:
+    def __init__(self, test_env: TestEnvironment, tags: list[str]) -> None:
         self._process: Optional[Process] = None
 
         self._stdout: Optional[asyncio.StreamReader] = None
@@ -21,6 +21,8 @@ class TestInstance:
         self._environment_file = NamedTemporaryFile(delete=False)
         test_env.save(self._environment_file)
         self._environment_file.close()
+
+        self._test_tags: list[str] = tags
 
         self.test_output: Queue = Queue()
 
@@ -40,11 +42,17 @@ class TestInstance:
             "./martel_test_library",
             "--variablefile",
             f"{Path(environment.__file__).absolute()};{self._environment_file.name}",
-            "--exclude",
-            "mcp7800",
         ]
         command.extend(["--loglevel", log_level])
+
+        print(self._test_tags)
+
+        for tag in self._test_tags:
+            command.extend(["--include", tag])
+
         command.append("./testsuite_pcb")
+
+        print(f"Running test with command: {command}")
 
         self._process = await asyncio.create_subprocess_exec(
             *command,
