@@ -9,7 +9,7 @@ Library             martel_printer_test_library.PrinterTestLibrary    ${Environm
 Test Setup          Run Keywords
 ...                     Printer Reset
 
-Test Tags           self_test
+Test Tags           selftest
 
 
 *** Test Cases ***
@@ -22,7 +22,7 @@ Test Checksum
 
 Test Battery ADC
     [Documentation]    Check that ADC gives a resonable battery reading.
-    [Tags]    adc    battery
+    [Tags]    adc_battery_voltage
 
     ${voltage}=    Printer Measure    Battery Voltage
     Should Be True    ${voltage} >= 4.8
@@ -30,7 +30,7 @@ Test Battery ADC
 
 Test Vcc ADC
     [Documentation]    Check that ADC gives a resonable Vcc reading.
-    [Tags]    adc    vcc
+    [Tags]    adc_vcc_voltage
 
     ${voltage}=    Printer Measure    Vcc Voltage
     Should Be True    ${voltage} >= 3.1
@@ -38,7 +38,7 @@ Test Vcc ADC
 
 Test Paper Sensor
     [Documentation]    Check that ADC gives a resonable paper sensor reading.
-    [Tags]    adc    paper
+    [Tags]    adc_paper_raw
 
     ${value}=    Printer Measure    Paper Sensor
     Should Be True    ${value} <= 600

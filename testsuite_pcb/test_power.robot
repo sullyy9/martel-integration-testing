@@ -11,7 +11,7 @@ Test Tags           power
 *** Test Cases ***
 Test MCP1800 Off Current
     [Documentation]    Test the current consumption when the printer is powered off.
-    [Tags]    mcp1800    off_current
+    [Tags]    mcp1800_offcurrent
     Printer Power Off
     Sleep    1s
     Open Power Relays
@@ -23,12 +23,12 @@ Test MCP1800 Off Current
 
 Test MCP1800 On Current
     [Documentation]    Test the current consumption while the printer is powered on.
-    [Tags]    mcp1800    on_current
+    [Tags]    mcp1800_oncurrent
     Battery Current Should Be Between    50mA    90mA
 
 Test MCP7800 Off Current
     [Documentation]    Test the current consumption when the printer is powered off.
-    [Tags]    mcp7800    off_current
+    [Tags]    mcp7800_offcurrent
     Printer Power Off
     Sleep    1s
     Open Power Relays
