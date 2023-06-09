@@ -1,7 +1,7 @@
 import argparse
 
 from .app import TestRunner
-from .selectors.types import Interface
+from .selectors import Interface
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--primary_interface")
@@ -20,18 +20,18 @@ app = TestRunner(
 )
 
 if args.primary_interface is not None:
-    app.selectors.primary_selector.lock()
+    app.selectors.primary.lock()
 
 if args.usb_interface is not None:
-    app.selectors.interface_selector[Interface.USB].lock()
+    app.selectors.printer[Interface.USB].lock()
 
 if args.rs232_interface is not None:
-    app.selectors.interface_selector[Interface.RS232].lock()
+    app.selectors.printer[Interface.RS232].lock()
 
 if args.infrared_interface is not None:
-    app.selectors.interface_selector[Interface.INFRARED].lock()
+    app.selectors.printer[Interface.INFRARED].lock()
 
 if args.bluetooth_interface is not None:
-    app.selectors.interface_selector[Interface.BLUETOOTH].lock()
+    app.selectors.printer[Interface.BLUETOOTH].lock()
 
 app.run()
