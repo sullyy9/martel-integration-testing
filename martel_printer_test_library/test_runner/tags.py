@@ -1,7 +1,8 @@
 from pathlib import Path
+from textual import on
 from textual.app import ComposeResult
 from textual.containers import Container, VerticalScroll
-from textual.widgets import Checkbox
+from textual.widgets import Checkbox, Button
 
 from robot.api import TestSuiteBuilder
 
@@ -12,9 +13,23 @@ class TagSelector(Container):
         self._tags: list[str] = []
 
     def compose(self) -> ComposeResult:
-        with VerticalScroll():
+        yield Button("All", id="select_all")
+        yield Button("None", id="select_none")
+        with VerticalScroll(id="tag_selector_scroll"):
             for tag in self._tags:
                 yield Checkbox(tag)
+
+    @on(Button.Pressed, "#select_all")
+    def start_button_pressed(self, event: Button.Pressed) -> None:
+        event.stop()
+        for check in self.query(Checkbox):
+            check.value = True
+
+    @on(Button.Pressed, "#select_none")
+    def stop_button_pressed(self, event: Button.Pressed) -> None:
+        event.stop()
+        for check in self.query(Checkbox):
+            check.value = False
 
     def update_tags(self, testsuite: Path) -> None:
         self._tags.clear()

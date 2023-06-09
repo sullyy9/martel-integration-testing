@@ -12,6 +12,14 @@ Screen {
 TagSelector {
     row-span: 2;
     padding: 1;
+
+    layout: grid;
+    grid-size: 2 2;
+    grid-rows: 4 2fr;
+}
+
+#tag_selector_scroll {
+    column-span: 2;
 }
 
 Terminal {
