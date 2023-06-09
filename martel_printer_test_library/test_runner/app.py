@@ -1,5 +1,6 @@
 import asyncio
 import contextlib
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Final, Optional
 
@@ -13,7 +14,7 @@ from textual.worker import Worker, WorkerState
 
 from .runtest import TestInstance
 from ..environment import TestEnvironment
-from .selectors import Selectors, Interface
+from .selectors import Selectors, Interface, SelectorConfig
 from .tags import TagSelector
 
 
@@ -52,6 +53,11 @@ class Terminal(Container):
         self.query_one(TextLog).clear()
 
 
+@dataclass
+class TestRunnerConfig:
+    selectors: SelectorConfig = field(default_factory=SelectorConfig)
+
+
 class TestRunner(App):
     CSS_PATH = "test_runner.css"
     BINDINGS = [
@@ -60,27 +66,14 @@ class TestRunner(App):
         ("x", "toggle_debug", "Toggle debug mode"),
     ]
 
-    def __init__(
-        self,
-        primary_interface: Interface | None = None,
-        usb_interface: str | None = None,
-        rs232_interface: str | None = None,
-        infrared_interface: str | None = None,
-        bluetooth_interface: str | None = None,
-    ) -> None:
+    def __init__(self, config: TestRunnerConfig = TestRunnerConfig()) -> None:
         super().__init__()
         self._testsuite = Path("./testsuite_pcb")
 
         self._test_instance: Optional[Worker] = None
         self._debug_mode: bool = False
 
-        self.selectors = Selectors(
-            primary_interface=primary_interface,
-            usb_interface=usb_interface,
-            rs232_interface=rs232_interface,
-            infrared_interface=infrared_interface,
-            bluetooth_interface=bluetooth_interface,
-        )
+        self._selectors = Selectors(config=config.selectors)
 
         self._tag_selector: Final = TagSelector()
         self._tag_selector.update_tags(self._testsuite)
@@ -88,7 +81,7 @@ class TestRunner(App):
     def compose(self) -> ComposeResult:
         yield Header()
         yield Placeholder("Tabs", id="tabs")
-        yield self.selectors
+        yield self._selectors
         yield self._tag_selector
         yield Terminal(id="terminal_area")
         yield Footer()
@@ -113,12 +106,12 @@ class TestRunner(App):
 
         self.query_one(Terminal).clear()
 
-        tcu_port = self.selectors.get_tcu_interface()
-        primary = self.selectors.get_primary_interface()
-        usb = self.selectors.get_printer_interface(Interface.USB)
-        rs232 = self.selectors.get_printer_interface(Interface.RS232)
-        infrared = self.selectors.get_printer_interface(Interface.INFRARED)
-        bluetooth = self.selectors.get_printer_interface(Interface.BLUETOOTH)
+        tcu_port = self._selectors.get_tcu_interface()
+        primary = self._selectors.get_primary_interface()
+        usb = self._selectors.get_printer_interface(Interface.USB)
+        rs232 = self._selectors.get_printer_interface(Interface.RS232)
+        infrared = self._selectors.get_printer_interface(Interface.INFRARED)
+        bluetooth = self._selectors.get_printer_interface(Interface.BLUETOOTH)
 
         env = TestEnvironment(
             tcu_port,

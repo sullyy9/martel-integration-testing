@@ -1,37 +1,29 @@
 import argparse
 
-from .app import TestRunner
-from .selectors import Interface
+from .app import TestRunner, TestRunnerConfig
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--primary_interface")
-parser.add_argument("--usb_interface")
-parser.add_argument("--rs232_interface")
-parser.add_argument("--infrared_interface")
-parser.add_argument("--bluetooth_interface")
+parser.add_argument("--primary")
+parser.add_argument("--usb")
+parser.add_argument("--rs232")
+parser.add_argument("--infrared")
+parser.add_argument("--bluetooth")
 
 args = parser.parse_args()
-app = TestRunner(
-    primary_interface=args.primary_interface,
-    usb_interface=args.usb_interface,
-    rs232_interface=args.rs232_interface,
-    infrared_interface=args.infrared_interface,
-    bluetooth_interface=args.bluetooth_interface,
-)
+config = TestRunnerConfig()
 
-if args.primary_interface is not None:
-    app.selectors.primary.lock()
+config.selectors.primary_init = args.primary
+config.selectors.primary_lock = False if args.primary is None else True
 
-if args.usb_interface is not None:
-    app.selectors.printer[Interface.USB].lock()
+config.selectors.usb_init = args.usb
+config.selectors.rs232_init = args.rs232
+config.selectors.infrared_init = args.infrared
+config.selectors.bluetooth_init = args.bluetooth
 
-if args.rs232_interface is not None:
-    app.selectors.printer[Interface.RS232].lock()
+config.selectors.usb_lock = False if args.usb is None else True
+config.selectors.rs232_lock = False if args.rs232 is None else True
+config.selectors.infrared_lock = False if args.infrared is None else True
+config.selectors.bluetooth_lock = False if args.bluetooth is None else True
 
-if args.infrared_interface is not None:
-    app.selectors.printer[Interface.INFRARED].lock()
-
-if args.bluetooth_interface is not None:
-    app.selectors.printer[Interface.BLUETOOTH].lock()
-
+app = TestRunner(config=config)
 app.run()

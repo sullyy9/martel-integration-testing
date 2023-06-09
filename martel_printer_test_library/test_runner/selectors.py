@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from enum import StrEnum
 import serial.tools.list_ports
 from typing import Final
@@ -42,12 +43,17 @@ def all_ports() -> list[str]:
 
 
 class Selector(Container):
-    def __init__(self, name: str, options: list[str], init: str | None = None) -> None:
+    def __init__(
+        self, name: str, options: list[str], init: str | None = None, lock: bool = False
+    ) -> None:
         super().__init__()
 
         self._label: Final = Label(name, classes="port_selector_label")
         self._select: Final = Select(
-            [(o, o) for o in options], classes="port_selector_select", value=init
+            [(o, o) for o in options],
+            classes="port_selector_select",
+            value=init,
+            disabled=lock,
         )
 
     def compose(self) -> ComposeResult:
@@ -69,26 +75,51 @@ class Selector(Container):
         self._select.disabled = False
 
 
+@dataclass
+class SelectorConfig:
+    primary_init: str | None = None
+    usb_init: str | None = None
+    rs232_init: str | None = None
+    infrared_init: str | None = None
+    bluetooth_init: str | None = None
+
+    primary_lock: bool = False
+    usb_lock: bool = False
+    rs232_lock: bool = False
+    infrared_lock: bool = False
+    bluetooth_lock: bool = False
+
+
 class Selectors(Container):
-    def __init__(
-        self,
-        primary_interface: Interface | None = None,
-        usb_interface: str | None = None,
-        rs232_interface: str | None = None,
-        infrared_interface: str | None = None,
-        bluetooth_interface: str | None = None,
-    ) -> None:
+    def __init__(self, config: SelectorConfig = SelectorConfig()) -> None:
         super().__init__()
 
         self.tcu: Final = Selector("TCU", active_ports())
         self.primary: Final = Selector(
-            "Primary", [i for i in Interface], init=primary_interface
+            "Primary",
+            [i for i in Interface],
+            init=config.primary_init,
+            lock=config.primary_lock,
         )
 
-        usb: Final = Selector("USB", com_ports(), init=usb_interface)
-        rs232: Final = Selector("RS232", all_ports(), init=rs232_interface)
-        ir: Final = Selector("Infrared", all_ports(), init=infrared_interface)
-        bt: Final = Selector("Bluetooth", [THROUGH_TCU], init=bluetooth_interface)
+        usb: Final = Selector(
+            "USB", com_ports(), init=config.usb_init, lock=config.usb_lock
+        )
+        rs232: Final = Selector(
+            "RS232", all_ports(), init=config.rs232_init, lock=config.rs232_lock
+        )
+        ir: Final = Selector(
+            "Infrared",
+            all_ports(),
+            init=config.infrared_init,
+            lock=config.infrared_lock,
+        )
+        bt: Final = Selector(
+            "Bluetooth",
+            [THROUGH_TCU],
+            init=config.bluetooth_init,
+            lock=config.bluetooth_lock,
+        )
 
         self.printer: Final = {
             Interface.USB: usb,
